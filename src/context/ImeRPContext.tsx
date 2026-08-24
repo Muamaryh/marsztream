@@ -77,8 +77,8 @@ export function ImeRPProvider({ children }: { children: React.ReactNode }) {
     dedupingInterval: 5000,
   });
 
-  const streams = data?.streams || [];
-  const gangs = data?.gangs || [];
+  const streams = useMemo(() => data?.streams || [], [data?.streams]);
+  const gangs = useMemo(() => data?.gangs || [], [data?.gangs]);
   const totalLive = data?.totalLive || streams.length;
 
   // Active Stream object
