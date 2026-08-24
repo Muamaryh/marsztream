@@ -172,7 +172,7 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
               <iframe
                 src={chatEmbedUrl}
                 title={`Live Chat ${stream.channelName}`}
-                className="w-full flex-1 border-0 min-w-[340px] bg-[#0f0f0f]"
+                className="w-full flex-1 border-0 min-w-0 bg-[#0f0f0f]"
               />
               {/* Bottom Quick Action */}
               <div className="p-2.5 border-t-[2px] border-[var(--border-color)] bg-[var(--bg-card)]">
