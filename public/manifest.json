@@ -1,0 +1,8 @@
+{
+  "name": "MarszLive - IME Roleplay Hub",
+  "short_name": "MarszLive",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf6ee",
+  "theme_color": "#ffbe5b"
+}
