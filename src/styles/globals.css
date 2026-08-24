@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Neo-Brutalist 2D Saweria Palette - Light Mode */
+  --bg-canvas: #faf6ee;
+  --bg-card: #ffffff;
+  --black: #18181b;
+  --border-color: #18181b;
+  --shadow-color: #18181b;
+  
+  --primary: #ffbe5b;
+  --primary-hover: #ffa82e;
+  --accent-mint: #2ee59d;
+  --accent-blue: #5bc0ff;
+  --accent-purple: #c499ff;
+  --accent-yellow: #ffe566;
+  --accent-red: #ff4b4b;
+  
+  --text-main: #18181b;
+  --text-muted: #52525b;
+  
+  --border-thick: 2.5px solid var(--border-color);
+  --border-sm: 2px solid var(--border-color);
+  --shadow-sm: 2px 2px 0px var(--shadow-color);
+  --shadow-md: 4px 4px 0px var(--shadow-color);
+  --shadow-lg: 6px 6px 0px var(--shadow-color);
+  --shadow-hover: 4px 4px 0px var(--shadow-color);
+  
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --transition: transform 0.1s ease, box-shadow 0.1s ease;
+  
+  --dot-color: rgba(24, 24, 27, 0.08);
+}
+
+.dark {
+  /* Neo-Brutalist 2D Palette - Dark Mode */
+  --bg-canvas: #111114;
+  --bg-card: #18181e;
+  --black: #ffffff;
+  --border-color: #383845;
+  --shadow-color: #000000;
+  
+  --primary: #ffbe5b;
+  --primary-hover: #ffa82e;
+  --accent-mint: #2ee59d;
+  --accent-blue: #5bc0ff;
+  --accent-purple: #c499ff;
+  --accent-yellow: #ffe566;
+  --accent-red: #ff4b4b;
+  
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  
+  --border-thick: 2.5px solid var(--border-color);
+  --border-sm: 2px solid var(--border-color);
+  --shadow-sm: 2px 2px 0px #000000;
+  --shadow-md: 4px 4px 0px #000000;
+  --shadow-lg: 6px 6px 0px #000000;
+  --shadow-hover: 4px 4px 0px #000000;
+  
+  --dot-color: rgba(255, 255, 255, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Super High-Performance GPU-Accelerated Fixed Background (Zero Paint Thrashing on Scroll) */
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  line-height: 1.5;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(var(--dot-color) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Font Classes */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Neo-Brutalist 2D Utility Classes (Optimized Transitions) */
+.neo-card {
+  background: var(--bg-card);
+  border: var(--border-thick);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transform: translateZ(0);
+}
+
+.neo-card-sm {
+  background: var(--bg-card);
+  border: var(--border-sm);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transform: translateZ(0);
+}
+
+.neo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  user-select: none;
+  transform: translateZ(0);
+}
+
+.neo-btn:hover {
+  transform: translateY(-1.5px);
+}
+
+.neo-btn:active {
+  transform: translateY(1.5px);
+}
+
+.neo-btn-primary {
+  background: var(--primary);
+  color: #18181b;
+}
+
+.neo-btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.neo-btn-red {
+  background: var(--accent-red);
+  color: #ffffff;
+}
+
+.neo-btn-mint {
+  background: var(--accent-mint);
+  color: #18181b;
+}
+
+.neo-btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: var(--border-sm);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #18181b;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
