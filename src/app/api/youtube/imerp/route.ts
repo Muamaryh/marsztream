@@ -418,12 +418,14 @@ async function checkChannelDirect(handle: string, streamMap: Map<string, ImeStre
       },
     });
     const watchHtml = await watchRes.text();
-    const isLive =
-      watchHtml.includes('"isLive":true') ||
-      watchHtml.includes('"isLiveContent":true') ||
-      watchHtml.includes('"style":"LIVE"');
 
-    if (!isLive) return;
+    const isActuallyPlaying =
+      watchHtml.includes('"isLive":true') ||
+      watchHtml.includes(' watching') ||
+      watchHtml.includes(' menonton') ||
+      watchHtml.includes('"label":"LIVE"');
+
+    if (!isActuallyPlaying) return; // DISCARD OFFLINE / SCHEDULED / PAST VODS
 
     const titleMatch = watchHtml.match(/<title>(.*?)<\/title>/);
     const rawTitle = titleMatch ? titleMatch[1].replace(' - YouTube', '').trim() : '';
