@@ -208,19 +208,8 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
               <iframe
                 src={chatEmbedUrl}
                 title={`Live Chat ${stream.channelName}`}
-                className="w-full flex-1 border-0 min-w-0 bg-[#0f0f0f]"
+                className="w-full h-full border-0 min-w-0 bg-[#0f0f0f]"
               />
-              
-              {/* Bottom Quick Action */}
-              <div className="p-2.5 border-t-[2px] border-[var(--border-color)] bg-[var(--bg-card)] flex items-center gap-2">
-                <button
-                  onClick={() => setShowGuideModal(true)}
-                  className="neo-btn neo-btn-primary flex-1 text-xs py-2 font-black shadow-[2px_2px_0px_var(--shadow-color)]"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Cara Chat Langsung di HP / Browser</span>
-                </button>
-              </div>
             </div>
           </div>
         )}
