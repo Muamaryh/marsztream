@@ -11,7 +11,7 @@ interface CacheData {
 }
 
 let cachedData: CacheData | null = null;
-const CACHE_TTL_MS = 15 * 1000; // 15 seconds fast sync
+const CACHE_TTL_MS = 15 * 1000; // 15 seconds fast cache
 
 // Alias mapping to consolidate duplicate gang names into one canonical ID
 const GANG_ALIASES: Record<string, string> = {
@@ -164,6 +164,9 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('roblox') ||
     lower.includes('skibidi') ||
     lower.includes('brainrot') ||
+    lower.includes('blood of jesus') ||
+    lower.includes('prayer') ||
+    lower.includes('back 4 blood') ||
     lower.includes('cakrawala') ||
     lower.includes('free fire') ||
     lower.includes('mobile legends') ||
@@ -214,8 +217,12 @@ function isImeRPStream(title: string, channelName: string): boolean {
   );
 }
 
-function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
-  if (!v || !v.videoId || streamMap.has(v.videoId)) return;
+function processVideoItem(
+  v: any,
+  streamMap: Map<string, ImeStream & { viewerNum?: number }>,
+  associatedGang?: string
+) {
+  if (!v || !v.videoId) return;
 
   // RULE 1: If lengthText exists (e.g. "4:23:48" or "1:15:20"), it is a FINISHED/RECORDED VOD! DISCARD!
   if (v.lengthText) return;
@@ -228,7 +235,46 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
   // RULE 3: Strict IME Roleplay filter
-  if (!isImeRPStream(title, channelName)) return;
+  if (!isImeRPStream(title, channelName) && !associatedGang) return;
+
+  const videoId = v.videoId;
+
+  // 1. Extract hashtags & tags
+  const rawTags = (title.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
+    t.replace('#', '').toUpperCase()
+  );
+
+  const uniqueTags = new Set<string>();
+  if (associatedGang && isValidGangTag(associatedGang)) {
+    const canonical = GANG_ALIASES[associatedGang] || associatedGang;
+    uniqueTags.add(canonical);
+  }
+
+  for (const tag of rawTags) {
+    if (isValidGangTag(tag)) {
+      const canonicalTag = GANG_ALIASES[tag] || tag;
+      uniqueTags.add(canonicalTag);
+    }
+  }
+
+  const upperTitle = title.toUpperCase();
+  for (const key of Object.keys(KNOWN_GANG_METADATA)) {
+    if (upperTitle.includes(key) && isValidGangTag(key)) {
+      const canonicalTag = GANG_ALIASES[key] || key;
+      uniqueTags.add(canonicalTag);
+    }
+  }
+
+  // If already in map, merge the new gang tags so gang filters work seamlessly
+  if (streamMap.has(videoId)) {
+    const existing = streamMap.get(videoId)!;
+    const mergedGangs = new Set(existing.gangs.filter((g) => g !== 'CIVILIAN'));
+    for (const g of uniqueTags) {
+      mergedGangs.add(g);
+    }
+    existing.gangs = mergedGangs.size > 0 ? Array.from(mergedGangs) : ['CIVILIAN'];
+    return;
+  }
 
   const rawViewCountText =
     v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
@@ -236,7 +282,6 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
     v.shortViewCountText?.simpleText ||
     '';
 
-  const videoId = v.videoId;
   const channelHandle =
     v.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.canonicalBaseUrl?.replace('/', '') ||
     `@${channelName.replace(/\s+/g, '')}`;
@@ -250,29 +295,6 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
   let viewerNum = 0;
   const matchNum = rawViewCountText.replace(/\./g, '').match(/(\d+)/);
   if (matchNum) viewerNum = parseInt(matchNum[1], 10);
-
-  // 1. Extract hashtags from title
-  const rawTags = (title.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
-    t.replace('#', '').toUpperCase()
-  );
-
-  // 2. Deduplicate and consolidate aliases per streamer
-  const uniqueTags = new Set<string>();
-  for (const tag of rawTags) {
-    if (isValidGangTag(tag)) {
-      const canonicalTag = GANG_ALIASES[tag] || tag;
-      uniqueTags.add(canonicalTag);
-    }
-  }
-
-  // 3. Check for known faction names in title
-  const upperTitle = title.toUpperCase();
-  for (const key of Object.keys(KNOWN_GANG_METADATA)) {
-    if (upperTitle.includes(key) && isValidGangTag(key)) {
-      const canonicalTag = GANG_ALIASES[key] || key;
-      uniqueTags.add(canonicalTag);
-    }
-  }
 
   const finalGangs = uniqueTags.size > 0 ? Array.from(uniqueTags) : ['CIVILIAN'];
 
@@ -290,7 +312,84 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
   });
 }
 
-async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
+const GANG_SEARCH_QUERIES: Array<{ query: string; gangId?: string }> = [
+  // General IME Roleplay queries
+  { query: 'imeroleplay' },
+  { query: '#imeroleplay' },
+  { query: 'imerp' },
+  { query: '#imerp' },
+  { query: 'ime roleplay' },
+  { query: 'gta imerp' },
+
+  // 4Blood
+  { query: '4blood imeroleplay', gangId: '4BLOOD' },
+  { query: '4blood imerp', gangId: '4BLOOD' },
+  { query: '#4blood', gangId: '4BLOOD' },
+  { query: '#4bloods', gangId: '4BLOOD' },
+  { query: '4blood', gangId: '4BLOOD' },
+
+  // Vagabond
+  { query: 'vagabond imeroleplay', gangId: 'VAGABOND' },
+  { query: 'vagabond imerp', gangId: 'VAGABOND' },
+  { query: '#vagabond', gangId: 'VAGABOND' },
+
+  // KZN
+  { query: 'kzn imeroleplay', gangId: 'KZN' },
+  { query: 'kzn imerp', gangId: 'KZN' },
+  { query: '#kzn', gangId: 'KZN' },
+
+  // Olsen
+  { query: 'olsen imeroleplay', gangId: 'OLSEN' },
+  { query: 'olsen imerp', gangId: 'OLSEN' },
+  { query: '#olsen', gangId: 'OLSEN' },
+
+  // CEO KOPAT & KOTAK
+  { query: 'ceokopat imeroleplay', gangId: 'CEOKOPAT' },
+  { query: '#ceokopat', gangId: 'CEOKOPAT' },
+  { query: '#anakceokopat', gangId: 'CEOKOPAT' },
+  { query: 'ceokotak imeroleplay', gangId: 'CEOKOTAK' },
+  { query: '#ceokotak', gangId: 'CEOKOTAK' },
+
+  // 5TAR & KCG
+  { query: '5tar imeroleplay', gangId: '5TAR' },
+  { query: '5tar imerp', gangId: '5TAR' },
+  { query: '#5tar', gangId: '5TAR' },
+  { query: '#kcg', gangId: 'KCG' },
+
+  // BFL & Mapendos
+  { query: 'bfl imeroleplay', gangId: 'BFL' },
+  { query: '#bfl', gangId: 'BFL' },
+  { query: 'mapendos imeroleplay', gangId: 'MAPENDOS' },
+  { query: '#mapendos', gangId: 'MAPENDOS' },
+
+  // Nakama & Dobrak
+  { query: 'nakama imeroleplay', gangId: 'NAKAMA' },
+  { query: '#nakamamc', gangId: 'NAKAMA' },
+  { query: 'dobrak imeroleplay', gangId: 'DOBRAK' },
+  { query: '#dobrakgang', gangId: 'DOBRAK' },
+
+  // SWAG & Cougan Fams & Lawless
+  { query: 'swag imeroleplay', gangId: 'SWAG' },
+  { query: '#swag', gangId: 'SWAG' },
+  { query: '#couganfams', gangId: 'COUGANFAMS' },
+  { query: 'lawless imeroleplay', gangId: 'LAWLESS' },
+  { query: '#lawless', gangId: 'LAWLESS' },
+
+  // Burgenk
+  { query: 'burgenk imeroleplay', gangId: 'BORGEN' },
+  { query: '#burgenk', gangId: 'BORGEN' },
+
+  // Police & Medical
+  { query: 'imepolice imeroleplay', gangId: 'IMEPOLICE' },
+  { query: '#imepolice', gangId: 'IMEPOLICE' },
+  { query: '#imedoc', gangId: 'IMEDOC' },
+];
+
+async function searchYouTubeQuery(
+  query: string,
+  streamMap: Map<string, ImeStream & { viewerNum?: number }>,
+  gangId?: string
+) {
   try {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgJAAQ%253D%253D`;
     const controller = new AbortController();
@@ -318,7 +417,7 @@ async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStrea
     for (const sec of sections) {
       const items = sec.itemSectionRenderer?.contents || [];
       for (const item of items) {
-        processVideoItem(item.videoRenderer, streamMap);
+        processVideoItem(item.videoRenderer, streamMap, gangId);
       }
     }
   } catch (e) {
@@ -337,30 +436,11 @@ export async function GET(req: NextRequest) {
 
   const streamMap = new Map<string, ImeStream & { viewerNum?: number }>();
 
-  // Primary live search queries
-  const primaryQueries = [
-    'imeroleplay',
-    '#imeroleplay',
-    'imerp',
-    '#imerp',
-    'ime roleplay',
-    'gta imerp',
-    '4blood',
-    'vagabond imerp',
-    'kzn imerp',
-    'olsen imerp',
-    '5tar imerp',
-    'ceokopat',
-    'ceokotak',
-    'mapendos imerp',
-    'swag imerp',
-    'nakama imerp',
-    'dobrak imerp',
-    'burgenk imerp',
-    'imepolice',
-  ];
-
-  await Promise.allSettled(primaryQueries.map((q) => searchYouTubeQuery(q, streamMap)));
+  await Promise.allSettled(
+    GANG_SEARCH_QUERIES.map(({ query, gangId }) =>
+      searchYouTubeQuery(query, streamMap, gangId)
+    )
+  );
 
   // Convert map to array and sort strictly by viewer count descending (Top active streamers first)
   const streams = Array.from(streamMap.values())
