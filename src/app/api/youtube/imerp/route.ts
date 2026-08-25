@@ -206,27 +206,22 @@ function isImeRPStream(title: string, channelName: string): boolean {
 function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
   if (!v || !v.videoId || streamMap.has(v.videoId)) return;
 
-  // STRICT 1: Check if the video is genuinely LIVE right now (LIVE badge or active watching text)
+  // RULE 1: If lengthText exists (e.g. "4:23:48"), it is a FINISHED/RECORDED VOD! DISCARD IMMEDIATELY!
+  if (v.lengthText) return;
+
+  // RULE 2: Must have BADGE_STYLE_TYPE_LIVE_NOW or LIVE overlay
   const badgesStr = JSON.stringify(v.badges || []);
   const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
-  const rawViewCountText =
-    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
-    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
-    v.shortViewCountText?.simpleText ||
-    '';
+  const hasLiveNowBadge =
+    badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW') ||
+    overlaysStr.includes('"style":"LIVE"');
 
-  const isLive =
-    badgesStr.includes('LIVE') ||
-    overlaysStr.includes('LIVE') ||
-    rawViewCountText.includes('menonton') ||
-    rawViewCountText.includes('watching');
-
-  if (!isLive) return; // DISCARD NON-LIVE / RECORDED VODS
+  if (!hasLiveNowBadge) return; // DISCARD NON-LIVE VIDEOS
 
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
-  // STRICT 2: Check if this live stream belongs to IME Roleplay
+  // RULE 3: Check if this live stream belongs to IME Roleplay
   if (!isImeRPStream(title, channelName)) return;
 
   const videoId = v.videoId;
@@ -238,6 +233,12 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
     v.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail?.thumbnails?.[0]?.url ||
     null;
   const avatar = rawAvatar ? rawAvatar.replace(/=s\d+/, '=s176') : null;
+
+  const rawViewCountText =
+    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.simpleText ||
+    '';
 
   // Format viewer count
   let viewers = rawViewCountText;
