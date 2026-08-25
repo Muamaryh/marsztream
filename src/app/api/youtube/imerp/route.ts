@@ -51,6 +51,10 @@ const GANG_ALIASES: Record<string, string> = {
 
 // Known factions / gangs with friendly display names & emojis
 const KNOWN_GANG_METADATA: Record<string, { name: string; icon: string }> = {
+  CEOKOPAT: { name: 'CEO KOPAT', icon: '👑' },
+  CEOKOTAK: { name: 'CEO KOTAK', icon: '📦' },
+  '5TAR': { name: '5TAR', icon: '⭐' },
+  KCG: { name: 'KCG', icon: '🦁' },
   VAGABOND: { name: 'Vagabond', icon: '⚔️' },
   KZN: { name: 'KZN', icon: '⚡' },
   '4BLOOD': { name: '4Blood', icon: '🩸' },
@@ -60,6 +64,11 @@ const KNOWN_GANG_METADATA: Record<string, { name: string; icon: string }> = {
   EMS: { name: 'EMS / Medis', icon: '🚑' },
   IMEDOC: { name: 'DOC / Penjara', icon: '🏢' },
   DOJ: { name: 'DOJ / Hakim', icon: '⚖️' },
+  SWAG: { name: 'SWAG', icon: '💎' },
+  COUGANFAMS: { name: 'Cougan Fams', icon: '🐺' },
+  LAWLESS: { name: 'Lawless', icon: '⚖️' },
+  BFL: { name: 'BFL', icon: '🔥' },
+  MAPENDOS: { name: 'Mapendos', icon: '👺' },
   BORGEN: { name: 'Borgen (Burgenk)', icon: '🐺' },
   BURGENK: { name: 'Borgen (Burgenk)', icon: '🐺' },
   PIRATES: { name: 'Pirates', icon: '🏴‍☠️' },
@@ -69,24 +78,16 @@ const KNOWN_GANG_METADATA: Record<string, { name: string; icon: string }> = {
   BOA: { name: 'BOA', icon: '🐍' },
   DOBRAK: { name: 'Dobrak (DSG)', icon: '👊' },
   BMC: { name: 'BMC', icon: '🏍️' },
-  CEOKOPAT: { name: 'CEO KOPAT', icon: '👑' },
-  CEOKOTAK: { name: 'CEO KOTAK', icon: '📦' },
   BOCILORILILIS: { name: 'Bocil Lilis', icon: '🌸' },
   BLACKJACK: { name: 'Blackjack', icon: '🃏' },
   OVERKILL: { name: 'Overkill', icon: '💀' },
   THELOST: { name: 'The Lost', icon: '🦅' },
   JAWA: { name: 'Jawa', icon: '🏝️' },
-  '5TAR': { name: '5TAR', icon: '⭐' },
-  SWAG: { name: 'SWAG', icon: '💎' },
   HOPE: { name: 'Hope', icon: '🕊️' },
-  BFL: { name: 'BFL', icon: '🔥' },
-  MAPENDOS: { name: 'Mapendos', icon: '👺' },
   NAKAMA: { name: 'Nakama MC', icon: '🏍️' },
   JRZ: { name: 'JRZ', icon: '⚡' },
-  LAWLESS: { name: 'Lawless', icon: '⚖️' },
   RATAGANG: { name: 'Rata Gang', icon: '💥' },
   WTGG: { name: 'WTGG', icon: '🎮' },
-  COUGANFAMS: { name: 'Cougan Fams', icon: '🐺' },
   NSN: { name: 'NSN 969', icon: '🚗' },
   SHINIGAMI: { name: 'Shinigami', icon: '☠️' },
   PINKPANTHER: { name: 'Pink Panther', icon: '🐆' },
@@ -198,6 +199,7 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('mapendos') ||
     lower.includes('bfl') ||
     lower.includes('5tar') ||
+    lower.includes('kcg') ||
     lower.includes('jawa') ||
     lower.includes('nakama') ||
     lower.includes('dobrak') ||
@@ -218,32 +220,21 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
   // RULE 1: If lengthText exists (e.g. "4:23:48" or "1:15:20"), it is a FINISHED/RECORDED VOD! DISCARD!
   if (v.lengthText) return;
 
-  // RULE 2: If thumbnailOverlays has a duration timestamp (e.g. "4:23:48"), it is an ENDED video!
-  const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
-  if (/"\d+:\d+(:\d+)?"/.test(overlaysStr)) return;
-
-  // RULE 3: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
+  // RULE 2: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
   const badgesStr = JSON.stringify(v.badges || []);
   if (!badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW')) return;
 
-  // RULE 3: Must have active watching viewers text (e.g. "425 menonton" / "146 watching")
+  const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
+  const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
+
+  // RULE 3: Strict IME Roleplay filter
+  if (!isImeRPStream(title, channelName)) return;
+
   const rawViewCountText =
     v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
     v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
     v.shortViewCountText?.simpleText ||
     '';
-
-  const isWatchingNow =
-    rawViewCountText.toLowerCase().includes('menonton') ||
-    rawViewCountText.toLowerCase().includes('watching');
-
-  if (!isWatchingNow) return; // DISCARD VIDEOS WITHOUT ACTIVE AUDIENCE
-
-  const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
-  const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
-
-  // RULE 4: Strict IME Roleplay filter
-  if (!isImeRPStream(title, channelName)) return;
 
   const videoId = v.videoId;
   const channelHandle =
@@ -292,7 +283,7 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
     channelHandle,
     avatar,
     title,
-    viewers: rawViewCountText,
+    viewers: rawViewCountText || '🔴 Live',
     viewerNum,
     isLive: true,
     gangs: finalGangs,
@@ -311,6 +302,7 @@ async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStrea
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cookie': 'SOCS=CAESEwgDEgk2ODEwNTk2NTQaAmVuIAEaBgiA_LyaBg; PREF=hl=id&gl=ID;',
       },
     });
     clearTimeout(timeoutId);
@@ -323,54 +315,10 @@ async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStrea
     const sections =
       json.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
 
-    let continuationToken: string | null = null;
-
     for (const sec of sections) {
-      if (sec.continuationItemRenderer) {
-        continuationToken =
-          sec.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token || null;
-      }
-
       const items = sec.itemSectionRenderer?.contents || [];
       for (const item of items) {
         processVideoItem(item.videoRenderer, streamMap);
-      }
-    }
-
-    // Fetch Page 2 if continuation token is available
-    if (continuationToken) {
-      try {
-        const apiRes = await fetch(`https://www.youtube.com/youtubei/v1/search?prettyPrint=false`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          },
-          body: JSON.stringify({
-            context: {
-              client: {
-                clientName: 'WEB',
-                clientVersion: '2.20240315.00.00',
-                hl: 'id',
-                gl: 'ID',
-              },
-            },
-            continuation: continuationToken,
-          }),
-        });
-        const data = await apiRes.json();
-        const page2Items =
-          data.onResponseReceivedCommands?.[0]?.appendContinuationItemsAction?.continuationItems || [];
-
-        for (const item of page2Items) {
-          const items = item.itemSectionRenderer?.contents || [];
-          for (const it of items) {
-            processVideoItem(it.videoRenderer, streamMap);
-          }
-        }
-      } catch (err) {
-        // ignore
       }
     }
   } catch (e) {
@@ -414,7 +362,7 @@ export async function GET(req: NextRequest) {
 
   await Promise.allSettled(primaryQueries.map((q) => searchYouTubeQuery(q, streamMap)));
 
-  // Convert map to array and sort by viewer count descending (Top active streamers first)
+  // Convert map to array and sort strictly by viewer count descending (Top active streamers first)
   const streams = Array.from(streamMap.values())
     .sort((a, b) => (b.viewerNum || 0) - (a.viewerNum || 0))
     .map(({ viewerNum, ...rest }) => rest);
