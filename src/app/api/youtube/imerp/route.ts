@@ -218,7 +218,11 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
   // RULE 1: If lengthText exists (e.g. "4:23:48" or "1:15:20"), it is a FINISHED/RECORDED VOD! DISCARD!
   if (v.lengthText) return;
 
-  // RULE 2: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
+  // RULE 2: If thumbnailOverlays has a duration timestamp (e.g. "4:23:48"), it is an ENDED video!
+  const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
+  if (/"\d+:\d+(:\d+)?"/.test(overlaysStr)) return;
+
+  // RULE 3: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
   const badgesStr = JSON.stringify(v.badges || []);
   if (!badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW')) return;
 
