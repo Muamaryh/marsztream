@@ -98,7 +98,6 @@ function isValidGangTag(tag: string): boolean {
   if (!upper || upper.length < 2) return false;
   if (/^\d+$/.test(upper)) return false;
 
-  // Exclude other RP servers and generic words ending or starting with RP / ROLEPLAY
   if (upper !== 'IMEPOLICE' && upper !== 'IMEDOC') {
     if (upper.endsWith('RP') || upper.startsWith('RP') || upper.includes('ROLEPLAY')) {
       return false;
@@ -151,20 +150,28 @@ function isValidGangTag(tag: string): boolean {
 function isImeRPStream(title: string, channelName: string): boolean {
   const lower = `${title} ${channelName}`.toLowerCase();
 
-  // Exclusion filters for unrelated games / 24/7 radio / cartoons / blox fruits / etc.
+  // Strict Exclusion for unrelated content
   if (
+    lower.includes('alan becker') ||
+    lower.includes('adventure time') ||
+    lower.includes('warner bros') ||
+    lower.includes('skylinewebcams') ||
+    lower.includes('webcam') ||
     lower.includes('pubg') ||
     lower.includes('playerunknown') ||
     lower.includes('blox fruit') ||
     lower.includes('roblox') ||
     lower.includes('skibidi') ||
+    lower.includes('brainrot') ||
     lower.includes('cakrawala') ||
     lower.includes('free fire') ||
     lower.includes('mobile legends') ||
     lower.includes('mlbb') ||
     lower.includes('radio 24/7') ||
+    lower.includes('relaxing') ||
+    lower.includes('crypto') ||
     lower.includes('asmr') ||
-    lower.includes('crypto')
+    lower.includes('gravity falls')
   ) {
     return false;
   }
@@ -199,29 +206,39 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('lawless') ||
     lower.includes('shinigami') ||
     lower.includes('imepolice') ||
-    lower.includes('imedoc')
+    lower.includes('imedoc') ||
+    lower.includes('emsime') ||
+    lower.includes('imemedicalcenter')
   );
 }
 
 function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
   if (!v || !v.videoId || streamMap.has(v.videoId)) return;
 
-  // RULE 1: If lengthText exists (e.g. "4:23:48"), it is a FINISHED/RECORDED VOD! DISCARD IMMEDIATELY!
+  // RULE 1: If lengthText exists (e.g. "4:23:48" or "1:15:20"), it is a FINISHED/RECORDED VOD! DISCARD!
   if (v.lengthText) return;
 
-  // RULE 2: Must have BADGE_STYLE_TYPE_LIVE_NOW or LIVE overlay
+  // RULE 2: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
   const badgesStr = JSON.stringify(v.badges || []);
-  const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
-  const hasLiveNowBadge =
-    badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW') ||
-    overlaysStr.includes('"style":"LIVE"');
+  if (!badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW')) return;
 
-  if (!hasLiveNowBadge) return; // DISCARD NON-LIVE VIDEOS
+  // RULE 3: Must have active watching viewers text (e.g. "425 menonton" / "146 watching")
+  const rawViewCountText =
+    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.simpleText ||
+    '';
+
+  const isWatchingNow =
+    rawViewCountText.toLowerCase().includes('menonton') ||
+    rawViewCountText.toLowerCase().includes('watching');
+
+  if (!isWatchingNow) return; // DISCARD VIDEOS WITHOUT ACTIVE AUDIENCE
 
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
-  // RULE 3: Check if this live stream belongs to IME Roleplay
+  // RULE 4: Strict IME Roleplay filter
   if (!isImeRPStream(title, channelName)) return;
 
   const videoId = v.videoId;
@@ -234,19 +251,7 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
     null;
   const avatar = rawAvatar ? rawAvatar.replace(/=s\d+/, '=s176') : null;
 
-  const rawViewCountText =
-    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
-    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
-    v.shortViewCountText?.simpleText ||
-    '';
-
-  // Format viewer count
-  let viewers = rawViewCountText;
-  if (!viewers || viewers.trim() === '') {
-    viewers = '🔴 Live';
-  }
-
-  // Parse numeric viewer count for smart sorting (highest viewers first)
+  // Parse numeric viewer count for sorting
   let viewerNum = 0;
   const matchNum = rawViewCountText.replace(/\./g, '').match(/(\d+)/);
   if (matchNum) viewerNum = parseInt(matchNum[1], 10);
@@ -283,7 +288,7 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum
     channelHandle,
     avatar,
     title,
-    viewers,
+    viewers: rawViewCountText,
     viewerNum,
     isLive: true,
     gangs: finalGangs,
@@ -380,18 +385,14 @@ export async function GET(req: NextRequest) {
 
   const streamMap = new Map<string, ImeStream & { viewerNum?: number }>();
 
-  // Primary Queries exactly matching YouTube's live queries
+  // Primary live search queries
   const primaryQueries = [
     'imeroleplay',
     '#imeroleplay',
     'imerp',
     '#imerp',
     'ime roleplay',
-    'ime rp',
     'gta imerp',
-    'gta ime roleplay',
-    'fivem imerp',
-    'fivem imeroleplay',
     '4blood',
     'vagabond imerp',
     'kzn imerp',
@@ -399,12 +400,12 @@ export async function GET(req: NextRequest) {
     '5tar imerp',
     'ceokopat',
     'ceokotak',
-    'burgenk imerp',
-    'nakama imerp',
     'mapendos imerp',
     'swag imerp',
-    'imepolice',
+    'nakama imerp',
     'dobrak imerp',
+    'burgenk imerp',
+    'imepolice',
   ];
 
   await Promise.allSettled(primaryQueries.map((q) => searchYouTubeQuery(q, streamMap)));
