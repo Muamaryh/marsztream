@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { ImeRPProvider } from '@/context/ImeRPContext';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 
 export const metadata: Metadata = {
   title: 'MarszLive - IME Roleplay Multi-Stream Hub',
@@ -26,6 +27,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
+            <CookieConsentBanner />
           </ImeRPProvider>
         </ThemeProvider>
       </body>
