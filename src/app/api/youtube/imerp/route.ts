@@ -18,6 +18,7 @@ const GANG_ALIASES: Record<string, string> = {
   ANAKCEOKOPAT: 'CEOKOPAT',
   CEOKOPAT: 'CEOKOPAT',
   ANAKCEOKOTAK: 'CEOKOTAK',
+  CEOKOTAK: 'CEOKOTAK',
   '4BLOODS': '4BLOOD',
   '4BLOOD': '4BLOOD',
   POLISI: 'IMEPOLICE',
@@ -119,14 +120,6 @@ function isValidGangTag(tag: string): boolean {
     'STREAM',
     'STREAMING',
     'INDONESIA',
-    'YOUTUBE',
-    'GAMING',
-    'GAME',
-    'PC',
-    'ROBLOX',
-    'RF',
-    'RFONLINE',
-    'RFONLINENEXT',
     'SUBATHON',
     'MEMBERSHIP',
     'TIKTOK',
@@ -160,80 +153,60 @@ function isImeRPStream(title: string, channelName: string): boolean {
 
   // Exclusion filters for unrelated games / 24/7 radio / cartoons / blox fruits / etc.
   if (
+    lower.includes('pubg') ||
+    lower.includes('playerunknown') ||
     lower.includes('blox fruit') ||
     lower.includes('roblox') ||
     lower.includes('skibidi') ||
-    lower.includes('brainrot') ||
-    lower.includes('gravity falls') ||
-    lower.includes('alan becker') ||
-    lower.includes('nightcore') ||
-    lower.includes('asmr') ||
-    lower.includes('undertale') ||
-    lower.includes('pubg') ||
+    lower.includes('cakrawala') ||
     lower.includes('free fire') ||
     lower.includes('mobile legends') ||
     lower.includes('mlbb') ||
     lower.includes('radio 24/7') ||
-    lower.includes('relaxing') ||
-    lower.includes('crypto') ||
-    lower.includes('xrp') ||
-    lower.includes('bitcoin') ||
-    lower.includes('valorant') ||
-    lower.includes('genshin')
+    lower.includes('asmr') ||
+    lower.includes('crypto')
   ) {
     return false;
   }
 
-  // Must have explicit IME / GTA Roleplay / recognized gang reference
-  const hasImeKeyword =
+  return (
     lower.includes('imeroleplay') ||
     lower.includes('imerp') ||
     lower.includes('ime rp') ||
     lower.includes('ime roleplay') ||
     lower.includes('#ime') ||
+    lower.includes('ime siti') ||
     lower.includes('ime city') ||
     lower.includes('ime server') ||
-    lower.includes('ime v2') ||
-    lower.includes('ime v3');
-
-  if (hasImeKeyword) return true;
-
-  // If gang keyword is present, ensure it's in GTA RP / FiveM / Roleplay context
-  const hasGangKeyword =
     lower.includes('vagabond') ||
     lower.includes('4blood') ||
     lower.includes('olsen') ||
     lower.includes('kzn') ||
     lower.includes('ceokopat') ||
+    lower.includes('anakceokopat') ||
+    lower.includes('ceokotak') ||
+    lower.includes('anakceokotak') ||
     lower.includes('burgenk') ||
     lower.includes('borgen') ||
     lower.includes('mapendos') ||
     lower.includes('bfl') ||
     lower.includes('5tar') ||
-    lower.includes('jawa gang') ||
-    lower.includes('nakama mc') ||
-    lower.includes('dobrak solid') ||
-    lower.includes('persidangan') ||
+    lower.includes('jawa') ||
+    lower.includes('nakama') ||
+    lower.includes('dobrak') ||
+    lower.includes('swag') ||
     lower.includes('couganfams') ||
     lower.includes('lawless') ||
-    lower.includes('shinigami');
-
-  const hasRPContext =
-    lower.includes('roleplay') ||
-    lower.includes('rp') ||
-    lower.includes('gta') ||
-    lower.includes('fivem') ||
-    lower.includes('day ') ||
-    lower.includes('kota ') ||
-    lower.includes('warga');
-
-  return hasGangKeyword && hasRPContext;
+    lower.includes('shinigami') ||
+    lower.includes('imepolice') ||
+    lower.includes('imedoc')
+  );
 }
 
-function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
+function processVideoItem(v: any, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
   if (!v || !v.videoId || streamMap.has(v.videoId)) return;
 
-  // STRICT 1: Check if the video is genuinely LIVE right now with active viewers (discards ended streams & VODs)
+  // STRICT 1: Check if the video is genuinely LIVE right now (LIVE badge or active watching text)
   const badgesStr = JSON.stringify(v.badges || []);
   const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
   const rawViewCountText =
@@ -242,17 +215,13 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
     v.shortViewCountText?.simpleText ||
     '';
 
-  const hasLiveBadge =
-    badgesStr.includes('LIVE_NOW') ||
+  const isLive =
     badgesStr.includes('LIVE') ||
-    overlaysStr.includes('LIVE');
+    overlaysStr.includes('LIVE') ||
+    rawViewCountText.includes('menonton') ||
+    rawViewCountText.includes('watching');
 
-  const hasActiveWatchingViewers =
-    rawViewCountText.toLowerCase().includes('menonton') ||
-    rawViewCountText.toLowerCase().includes('watching');
-
-  // Must have active live badge AND active viewer count
-  if (!hasLiveBadge || !hasActiveWatchingViewers) return;
+  if (!isLive) return; // DISCARD NON-LIVE / RECORDED VODS
 
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
@@ -270,7 +239,16 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
     null;
   const avatar = rawAvatar ? rawAvatar.replace(/=s\d+/, '=s176') : null;
 
-  const viewers = rawViewCountText;
+  // Format viewer count
+  let viewers = rawViewCountText;
+  if (!viewers || viewers.trim() === '') {
+    viewers = '🔴 Live';
+  }
+
+  // Parse numeric viewer count for smart sorting (highest viewers first)
+  let viewerNum = 0;
+  const matchNum = rawViewCountText.replace(/\./g, '').match(/(\d+)/);
+  if (matchNum) viewerNum = parseInt(matchNum[1], 10);
 
   // 1. Extract hashtags from title
   const rawTags = (title.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
@@ -305,12 +283,13 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
     avatar,
     title,
     viewers,
+    viewerNum,
     isLive: true,
     gangs: finalGangs,
   });
 }
 
-async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStream>) {
+async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStream & { viewerNum?: number }>) {
   try {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgJAAQ%253D%253D`;
     const controller = new AbortController();
@@ -389,104 +368,6 @@ async function searchYouTubeQuery(query: string, streamMap: Map<string, ImeStrea
   }
 }
 
-async function checkChannelDirect(handle: string, streamMap: Map<string, ImeStream>) {
-  try {
-    const url = `https://www.youtube.com/${handle}/live`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      },
-      redirect: 'follow',
-    });
-    clearTimeout(timeoutId);
-
-    const html = await res.text();
-    const vMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-    const videoId = vMatch ? vMatch[1] : null;
-    if (!videoId || streamMap.has(videoId)) return;
-
-    // Fetch video page for verification
-    const watchRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      },
-    });
-    const watchHtml = await watchRes.text();
-
-    const isActuallyPlaying =
-      watchHtml.includes('"isLive":true') ||
-      watchHtml.includes(' watching') ||
-      watchHtml.includes(' menonton') ||
-      watchHtml.includes('"label":"LIVE"');
-
-    if (!isActuallyPlaying) return; // DISCARD OFFLINE / SCHEDULED / PAST VODS
-
-    const titleMatch = watchHtml.match(/<title>(.*?)<\/title>/);
-    const rawTitle = titleMatch ? titleMatch[1].replace(' - YouTube', '').trim() : '';
-
-    const lowerTitle = rawTitle.toLowerCase();
-    const isImeRP =
-      lowerTitle.includes('imerp') ||
-      lowerTitle.includes('imeroleplay') ||
-      lowerTitle.includes('ime rp') ||
-      lowerTitle.includes('ime roleplay') ||
-      lowerTitle.includes('#ime') ||
-      lowerTitle.includes('vagabond') ||
-      lowerTitle.includes('burgenk') ||
-      lowerTitle.includes('borgen') ||
-      lowerTitle.includes('4blood') ||
-      lowerTitle.includes('olsen') ||
-      lowerTitle.includes('kzn');
-
-    if (!isImeRP) return;
-
-    const channelMatch = watchHtml.match(/"author":"(.*?)"/);
-    const channelName = channelMatch ? channelMatch[1] : handle.replace('@', '');
-
-    const rawTags = (rawTitle.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
-      t.replace('#', '').toUpperCase()
-    );
-
-    const uniqueTags = new Set<string>();
-    for (const tag of rawTags) {
-      if (isValidGangTag(tag)) {
-        const canonicalTag = GANG_ALIASES[tag] || tag;
-        uniqueTags.add(canonicalTag);
-      }
-    }
-
-    const upperTitle = rawTitle.toUpperCase();
-    for (const key of Object.keys(KNOWN_GANG_METADATA)) {
-      if (upperTitle.includes(key) && isValidGangTag(key)) {
-        const canonicalTag = GANG_ALIASES[key] || key;
-        uniqueTags.add(canonicalTag);
-      }
-    }
-
-    const finalGangs = uniqueTags.size > 0 ? Array.from(uniqueTags) : ['CIVILIAN'];
-
-    streamMap.set(videoId, {
-      id: videoId,
-      videoId,
-      channelName,
-      channelHandle: handle,
-      avatar: null,
-      title: rawTitle,
-      viewers: '',
-      isLive: true,
-      gangs: finalGangs,
-    });
-  } catch (e) {
-    // ignore
-  }
-}
-
 export async function GET(req: NextRequest) {
   const now = Date.now();
   const force = req.nextUrl.searchParams.get('force') === '1';
@@ -496,9 +377,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(cachedData);
   }
 
-  const streamMap = new Map<string, ImeStream>();
+  const streamMap = new Map<string, ImeStream & { viewerNum?: number }>();
 
-  const generalQueries = [
+  // Primary Queries exactly matching YouTube's live queries
+  const primaryQueries = [
     'imeroleplay',
     '#imeroleplay',
     'imerp',
@@ -509,92 +391,36 @@ export async function GET(req: NextRequest) {
     'gta ime roleplay',
     'fivem imerp',
     'fivem imeroleplay',
-    'imeroleplay live',
-    'imerp live',
-    'gta 5 imerp',
-  ];
-
-  const gangQueries = [
-    'vagabond',
-    '#vagabond',
-    'kzn',
-    '#kzn',
     '4blood',
-    '#4blood',
-    '4blood live',
-    '#4blood live',
-    'persidangan 4blood',
-    'persidangan imeroleplay',
-    'olsen',
-    '#olsen',
-    'burgenk',
-    '#burgenk',
-    'borgen',
-    '#borgen',
-    'dobrak',
-    '#dobrak',
-    'dsg',
-    '#dsg',
+    'vagabond imerp',
+    'kzn imerp',
+    'olsen imerp',
+    '5tar imerp',
     'ceokopat',
-    '#ceokopat',
-    'anakceokopat',
-    '#anakceokopat',
-    'nakama',
-    '#nakama',
-    '5tar',
-    '#5tar',
-    'swag',
-    '#swag',
-    'jawa',
-    '#jawa',
-    'mapendos',
-    '#mapendos',
-    'bfl',
-    '#bfl',
-    'warlocks',
-    '#warlocks',
-    'pirates',
-    '#pirates',
+    'ceokotak',
+    'burgenk imerp',
+    'nakama imerp',
+    'mapendos imerp',
+    'swag imerp',
     'imepolice',
-    '#imepolice',
-    'bmc',
-    '#bmc',
-    'boa',
-    '#boa',
-    'shinigami',
-    '#shinigami',
-    'bocilorililis',
-    '#bocilorililis',
+    'dobrak imerp',
   ];
 
-  const prominentChannels = [
-    '@NAHMIER',
-    '@TheMoiLee',
-    '@oxidstudios',
-    '@DoniMulyadi',
-    '@Rifzasanjani',
-    '@joo-t5e',
-    '@WindahBasudara',
-    '@brandochillgames',
-    '@putrirp',
-    '@Miselulaby',
-  ];
+  await Promise.allSettled(primaryQueries.map((q) => searchYouTubeQuery(q, streamMap)));
 
-  const allQueries = [...generalQueries, ...gangQueries];
-
-  await Promise.allSettled([
-    ...allQueries.map((q) => searchYouTubeQuery(q, streamMap)),
-    ...prominentChannels.map((handle) => checkChannelDirect(handle, streamMap)),
-  ]);
-
-  const streams = Array.from(streamMap.values());
+  // Convert map to array and sort by viewer count descending (Top active streamers first)
+  const streams = Array.from(streamMap.values())
+    .sort((a, b) => (b.viewerNum || 0) - (a.viewerNum || 0))
+    .map(({ viewerNum, ...rest }) => rest);
 
   // Count gangs / factions (deduplicated per stream)
   const gangCountMap = new Map<string, number>();
 
   for (const s of streams) {
-    for (const g of s.gangs) {
-      gangCountMap.set(g, (gangCountMap.get(g) || 0) + 1);
+    if (Array.isArray(s.gangs)) {
+      for (const g of s.gangs) {
+        gangCountMap.set(g, (gangCountMap.get(g) || 0) + 1);
+      }
     }
   }
 
@@ -608,28 +434,53 @@ export async function GET(req: NextRequest) {
     },
   ];
 
-  // Sort gangs by count descending
-  const sortedGangEntries = Array.from(gangCountMap.entries()).sort((a, b) => b[1] - a[1]);
+  // Add known factions with streamer count > 0
+  const sortedKnownGangs = Object.entries(KNOWN_GANG_METADATA)
+    .map(([id, meta]) => ({
+      id,
+      name: meta.name,
+      icon: meta.icon,
+      count: gangCountMap.get(id) || 0,
+    }))
+    .filter((g) => g.count > 0)
+    .sort((a, b) => b.count - a.count);
 
-  for (const [gangId, count] of sortedGangEntries) {
-    const meta = KNOWN_GANG_METADATA[gangId];
-    const name = meta ? meta.name : gangId === 'CIVILIAN' ? 'Civilian / Lainnya' : gangId;
-    const icon = meta ? meta.icon : '🎮';
+  gangs.push(...sortedKnownGangs);
 
+  // Add remaining active gangs not in known metadata
+  for (const [gangId, count] of gangCountMap.entries()) {
+    if (
+      gangId !== 'CIVILIAN' &&
+      !KNOWN_GANG_METADATA[gangId] &&
+      !gangs.some((g) => g.id === gangId)
+    ) {
+      gangs.push({
+        id: gangId,
+        name: gangId,
+        count,
+        icon: '⚔️',
+      });
+    }
+  }
+
+  // Add Civilian / Other category at the end if present
+  const civilianCount = gangCountMap.get('CIVILIAN') || 0;
+  if (civilianCount > 0) {
     gangs.push({
-      id: gangId,
-      name,
-      count,
-      icon,
+      id: 'CIVILIAN',
+      name: 'Civilian / Lainnya',
+      count: civilianCount,
+      icon: '👤',
     });
   }
 
-  cachedData = {
+  const result: CacheData = {
     streams,
     gangs,
     totalLive: streams.length,
     expiresAt: now + CACHE_TTL_MS,
   };
 
-  return NextResponse.json(cachedData);
+  cachedData = result;
+  return NextResponse.json(result);
 }
