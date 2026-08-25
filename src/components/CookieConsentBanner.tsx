@@ -5,14 +5,10 @@ import {
   Cookie, 
   CheckCircle2, 
   X, 
-  HelpCircle, 
-  Smartphone, 
   ShieldCheck, 
   Sparkles,
-  ExternalLink,
   ChevronDown,
-  ChevronUp,
-  Lock
+  ChevronUp
 } from 'lucide-react';
 
 export function CookieConsentBanner() {
@@ -22,51 +18,50 @@ export function CookieConsentBanner() {
 
   useEffect(() => {
     try {
-      const isDismissed = localStorage.getItem('marsz_cookie_sync_dismissed');
-      if (!isDismissed) {
-        // Show after 1 second
-        const timer = setTimeout(() => setIsVisible(true), 1200);
-        return () => clearTimeout(timer);
-      }
-    } catch (e) {}
+      if (typeof window !== 'undefined') {
+        const isDismissed = localStorage.getItem('marsz_cookie_sync_dismissed');
+        if (!isDismissed) {
+          const timer = setTimeout(() => setIsVisible(true), 1200);
+          return () => clearTimeout(timer);
+        }
 
-    // Detect browser
-    if (typeof window !== 'undefined') {
-      const ua = navigator.userAgent.toLowerCase();
-      if (/iphone|ipad|ipod/.test(ua) || (ua.includes('safari') && !ua.includes('chrome'))) {
-        setDetectedBrowser('safari');
-      } else if (ua.includes('brave') || (navigator as any).brave) {
-        setDetectedBrowser('brave');
-      } else if (/android/.test(ua)) {
-        setDetectedBrowser('android');
-      } else if (ua.includes('firefox')) {
-        setDetectedBrowser('firefox');
-      } else {
-        setDetectedBrowser('chrome');
+        const ua = (navigator?.userAgent || '').toLowerCase();
+        if (/iphone|ipad|ipod/.test(ua) || (ua.includes('safari') && !ua.includes('chrome'))) {
+          setDetectedBrowser('safari');
+        } else if (ua.includes('brave')) {
+          setDetectedBrowser('brave');
+        } else if (/android/.test(ua)) {
+          setDetectedBrowser('android');
+        } else if (ua.includes('firefox')) {
+          setDetectedBrowser('firefox');
+        } else {
+          setDetectedBrowser('chrome');
+        }
       }
+    } catch (e) {
+      // ignore
     }
   }, []);
 
-  const handleAccept = async () => {
-    // Attempt Storage Access API if supported by browser (Safari / Firefox / Edge)
-    if (typeof document !== 'undefined' && 'requestStorageAccess' in document) {
-      try {
-        await (document as any).requestStorageAccess();
-      } catch (e) {
-        // fallback
-      }
-    }
-
+  const handleAccept = () => {
     try {
-      localStorage.setItem('marsz_cookie_sync_dismissed', 'true');
-    } catch (e) {}
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('marsz_cookie_sync_dismissed', 'true');
+      }
+    } catch (e) {
+      // ignore
+    }
     setIsVisible(false);
   };
 
   const handleDismiss = () => {
     try {
-      localStorage.setItem('marsz_cookie_sync_dismissed', 'true');
-    } catch (e) {}
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('marsz_cookie_sync_dismissed', 'true');
+      }
+    } catch (e) {
+      // ignore
+    }
     setIsVisible(false);
   };
 

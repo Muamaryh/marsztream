@@ -42,9 +42,11 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
     );
   }
 
-  const channelHandleClean = stream.channelHandle?.startsWith('@')
-    ? stream.channelHandle
-    : `@${(stream.channelHandle || stream.channelName).replace(/\s+/g, '')}`;
+  const channelHandleClean = stream.channelHandle
+    ? stream.channelHandle.startsWith('@')
+      ? stream.channelHandle
+      : `@${stream.channelHandle.replace(/\s+/g, '')}`
+    : `@${(stream.channelName || 'Streamer').replace(/\s+/g, '')}`;
   const subscribeUrl = `https://www.youtube.com/${channelHandleClean}?sub_confirmation=1`;
   const videoEmbedUrl = `https://www.youtube.com/embed/${stream.videoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0`;
   const chatEmbedUrl = `https://www.youtube.com/live_chat?v=${stream.videoId}&embed_domain=${embedDomain}&dark_theme=1`;
