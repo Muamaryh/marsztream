@@ -51,13 +51,13 @@ const GANG_ALIASES: Record<string, string> = {
 
 // Known factions / gangs with friendly display names & emojis
 const KNOWN_GANG_METADATA: Record<string, { name: string; icon: string }> = {
+  '4BLOOD': { name: '4Blood', icon: '🩸' },
+  VAGABOND: { name: 'Vagabond', icon: '⚔️' },
   CEOKOPAT: { name: 'CEO KOPAT', icon: '👑' },
   CEOKOTAK: { name: 'CEO KOTAK', icon: '📦' },
   '5TAR': { name: '5TAR', icon: '⭐' },
   KCG: { name: 'KCG', icon: '🦁' },
-  VAGABOND: { name: 'Vagabond', icon: '⚔️' },
   KZN: { name: 'KZN', icon: '⚡' },
-  '4BLOOD': { name: '4Blood', icon: '🩸' },
   OLSEN: { name: 'Olsen', icon: '🦅' },
   IMEPOLICE: { name: 'Police / PD', icon: '👮' },
   LSSD: { name: 'Sheriff / LSSD', icon: '⭐' },
@@ -167,6 +167,7 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('blood of jesus') ||
     lower.includes('prayer') ||
     lower.includes('back 4 blood') ||
+    lower.includes('back 4 bloods') ||
     lower.includes('cakrawala') ||
     lower.includes('free fire') ||
     lower.includes('mobile legends') ||
@@ -175,6 +176,8 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('relaxing') ||
     lower.includes('crypto') ||
     lower.includes('asmr') ||
+    lower.includes('resort') ||
+    lower.includes('parking lot') ||
     lower.includes('gravity falls')
   ) {
     return false;
@@ -191,6 +194,7 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('ime server') ||
     lower.includes('vagabond') ||
     lower.includes('4blood') ||
+    lower.includes('4bloods') ||
     lower.includes('olsen') ||
     lower.includes('kzn') ||
     lower.includes('ceokopat') ||
@@ -213,7 +217,13 @@ function isImeRPStream(title: string, channelName: string): boolean {
     lower.includes('imepolice') ||
     lower.includes('imedoc') ||
     lower.includes('emsime') ||
-    lower.includes('imemedicalcenter')
+    lower.includes('imemedicalcenter') ||
+    lower.includes('goldenboy') ||
+    lower.includes('loudboyz') ||
+    lower.includes('barongfams') ||
+    lower.includes('redstone') ||
+    lower.includes('chaser') ||
+    lower.includes('samdre')
   );
 }
 
@@ -235,7 +245,7 @@ function processVideoItem(
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
   // RULE 3: Strict IME Roleplay filter
-  if (!isImeRPStream(title, channelName) && !associatedGang) return;
+  if (!isImeRPStream(title, channelName)) return;
 
   const videoId = v.videoId;
 
@@ -265,7 +275,7 @@ function processVideoItem(
     }
   }
 
-  // If already in map, merge the new gang tags so gang filters work seamlessly
+  // If already in map, merge the new gang tags
   if (streamMap.has(videoId)) {
     const existing = streamMap.get(videoId)!;
     const mergedGangs = new Set(existing.gangs.filter((g) => g !== 'CIVILIAN'));
