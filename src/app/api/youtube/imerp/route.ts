@@ -155,30 +155,109 @@ function isValidGangTag(tag: string): boolean {
   return true;
 }
 
+function isImeRPStream(title: string, channelName: string): boolean {
+  const lower = `${title} ${channelName}`.toLowerCase();
+
+  // Exclusion filters for unrelated games / 24/7 radio / cartoons / blox fruits / etc.
+  if (
+    lower.includes('blox fruit') ||
+    lower.includes('roblox') ||
+    lower.includes('skibidi') ||
+    lower.includes('brainrot') ||
+    lower.includes('gravity falls') ||
+    lower.includes('alan becker') ||
+    lower.includes('nightcore') ||
+    lower.includes('asmr') ||
+    lower.includes('undertale') ||
+    lower.includes('pubg') ||
+    lower.includes('free fire') ||
+    lower.includes('mobile legends') ||
+    lower.includes('mlbb') ||
+    lower.includes('radio 24/7') ||
+    lower.includes('relaxing') ||
+    lower.includes('crypto') ||
+    lower.includes('xrp') ||
+    lower.includes('bitcoin') ||
+    lower.includes('valorant') ||
+    lower.includes('genshin')
+  ) {
+    return false;
+  }
+
+  // Must have explicit IME / GTA Roleplay / recognized gang reference
+  const hasImeKeyword =
+    lower.includes('imeroleplay') ||
+    lower.includes('imerp') ||
+    lower.includes('ime rp') ||
+    lower.includes('ime roleplay') ||
+    lower.includes('#ime') ||
+    lower.includes('ime city') ||
+    lower.includes('ime server') ||
+    lower.includes('ime v2') ||
+    lower.includes('ime v3');
+
+  if (hasImeKeyword) return true;
+
+  // If gang keyword is present, ensure it's in GTA RP / FiveM / Roleplay context
+  const hasGangKeyword =
+    lower.includes('vagabond') ||
+    lower.includes('4blood') ||
+    lower.includes('olsen') ||
+    lower.includes('kzn') ||
+    lower.includes('ceokopat') ||
+    lower.includes('burgenk') ||
+    lower.includes('borgen') ||
+    lower.includes('mapendos') ||
+    lower.includes('bfl') ||
+    lower.includes('5tar') ||
+    lower.includes('jawa gang') ||
+    lower.includes('nakama mc') ||
+    lower.includes('dobrak solid') ||
+    lower.includes('persidangan') ||
+    lower.includes('couganfams') ||
+    lower.includes('lawless') ||
+    lower.includes('shinigami');
+
+  const hasRPContext =
+    lower.includes('roleplay') ||
+    lower.includes('rp') ||
+    lower.includes('gta') ||
+    lower.includes('fivem') ||
+    lower.includes('day ') ||
+    lower.includes('kota ') ||
+    lower.includes('warga');
+
+  return hasGangKeyword && hasRPContext;
+}
+
 function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
   if (!v || !v.videoId || streamMap.has(v.videoId)) return;
 
+  // STRICT 1: Check if the video is genuinely LIVE right now (not recorded VOD / past stream)
+  const badgesStr = JSON.stringify(v.badges || []);
+  const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
+  const rawViewCountText =
+    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
+    v.shortViewCountText?.simpleText ||
+    '';
+
+  const isLiveNow =
+    badgesStr.includes('LIVE_NOW') ||
+    badgesStr.includes('LIVE') ||
+    overlaysStr.includes('LIVE') ||
+    rawViewCountText.toLowerCase().includes('menonton') ||
+    rawViewCountText.toLowerCase().includes('watching');
+
+  if (!isLiveNow) return; // DISCARD RECORDED VODS / PAST STREAMS
+
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
-  const lowerTitle = title.toLowerCase();
+  const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
-  // Strict check: must be IME Roleplay stream
-  const isImeRP =
-    lowerTitle.includes('imerp') ||
-    lowerTitle.includes('imeroleplay') ||
-    lowerTitle.includes('ime rp') ||
-    lowerTitle.includes('ime roleplay') ||
-    lowerTitle.includes('#ime') ||
-    lowerTitle.includes('vagabond') ||
-    lowerTitle.includes('burgenk') ||
-    lowerTitle.includes('borgen') ||
-    lowerTitle.includes('4blood') ||
-    lowerTitle.includes('olsen') ||
-    lowerTitle.includes('kzn');
-
-  if (!isImeRP) return;
+  // STRICT 2: Check if this live stream belongs to IME Roleplay
+  if (!isImeRPStream(title, channelName)) return;
 
   const videoId = v.videoId;
-  const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
   const channelHandle =
     v.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.canonicalBaseUrl?.replace('/', '') ||
     `@${channelName.replace(/\s+/g, '')}`;
@@ -188,10 +267,7 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
     null;
   const avatar = rawAvatar ? rawAvatar.replace(/=s\d+/, '=s176') : null;
 
-  const viewers =
-    v.shortViewCountText?.runs?.map((r: any) => r.text).join('') ||
-    v.viewCountText?.runs?.map((r: any) => r.text).join('') ||
-    '';
+  const viewers = rawViewCountText;
 
   // 1. Extract hashtags from title
   const rawTags = (title.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
