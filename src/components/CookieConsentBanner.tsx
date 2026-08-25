@@ -12,11 +12,13 @@ import {
 } from 'lucide-react';
 
 export function CookieConsentBanner() {
+  const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [detectedBrowser, setDetectedBrowser] = useState<string>('all');
 
   useEffect(() => {
+    setMounted(true);
     try {
       if (typeof window !== 'undefined') {
         const isDismissed = localStorage.getItem('marsz_cookie_sync_dismissed');
@@ -65,7 +67,7 @@ export function CookieConsentBanner() {
     setIsVisible(false);
   };
 
-  if (!isVisible) return null;
+  if (!mounted || !isVisible) return null;
 
   return (
     <div className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-5 sm:max-w-md z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">

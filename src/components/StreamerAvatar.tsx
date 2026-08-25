@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface StreamerAvatarProps {
-  name: string;
+  name?: string | null;
   avatarUrl?: string | null;
   size?: 'sm' | 'md' | 'lg';
   isLive?: boolean;
@@ -19,7 +19,8 @@ const MONOGRAM_COLORS = [
   'bg-[#ffa82e] text-[#18181b]', // Orange
 ];
 
-function getMonogramColor(name: string) {
+function getMonogramColor(name?: string | null) {
+  if (!name || typeof name !== 'string') return MONOGRAM_COLORS[0];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -28,13 +29,13 @@ function getMonogramColor(name: string) {
   return MONOGRAM_COLORS[index];
 }
 
-function getInitials(name: string) {
-  if (!name) return 'YT';
+function getInitials(name?: string | null) {
+  if (!name || typeof name !== 'string') return 'YT';
   const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase() || 'YT';
   }
-  return name.slice(0, 2).toUpperCase();
+  return (name.slice(0, 2) || 'YT').toUpperCase();
 }
 
 export function StreamerAvatar({
@@ -57,8 +58,9 @@ export function StreamerAvatar({
     lg: 'w-12 h-12 text-sm',
   };
 
-  const initials = getInitials(name);
-  const colorClass = getMonogramColor(name);
+  const displayName = name || 'Streamer';
+  const initials = getInitials(displayName);
+  const colorClass = getMonogramColor(displayName);
 
   return (
     <div
@@ -74,7 +76,7 @@ export function StreamerAvatar({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarUrl}
-          alt={name}
+          alt={displayName}
           referrerPolicy="no-referrer"
           loading="eager"
           onError={() => setImgError(true)}

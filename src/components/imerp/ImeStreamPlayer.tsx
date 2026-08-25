@@ -42,6 +42,7 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
     );
   }
 
+  const embedDomain = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   const channelHandleClean = stream.channelHandle
     ? stream.channelHandle.startsWith('@')
       ? stream.channelHandle
