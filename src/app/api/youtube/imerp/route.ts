@@ -233,7 +233,7 @@ function isImeRPStream(title: string, channelName: string): boolean {
 function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
   if (!v || !v.videoId || streamMap.has(v.videoId)) return;
 
-  // STRICT 1: Check if the video is genuinely LIVE right now (not recorded VOD / past stream)
+  // STRICT 1: Check if the video is genuinely LIVE right now with active viewers (discards ended streams & VODs)
   const badgesStr = JSON.stringify(v.badges || []);
   const overlaysStr = JSON.stringify(v.thumbnailOverlays || []);
   const rawViewCountText =
@@ -242,14 +242,17 @@ function processVideoItem(v: any, streamMap: Map<string, ImeStream>) {
     v.shortViewCountText?.simpleText ||
     '';
 
-  const isLiveNow =
+  const hasLiveBadge =
     badgesStr.includes('LIVE_NOW') ||
     badgesStr.includes('LIVE') ||
-    overlaysStr.includes('LIVE') ||
+    overlaysStr.includes('LIVE');
+
+  const hasActiveWatchingViewers =
     rawViewCountText.toLowerCase().includes('menonton') ||
     rawViewCountText.toLowerCase().includes('watching');
 
-  if (!isLiveNow) return; // DISCARD RECORDED VODS / PAST STREAMS
+  // Must have active live badge AND active viewer count
+  if (!hasLiveBadge || !hasActiveWatchingViewers) return;
 
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
