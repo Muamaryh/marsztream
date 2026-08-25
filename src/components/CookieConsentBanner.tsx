@@ -11,7 +11,8 @@ import {
   Sparkles,
   ExternalLink,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Lock
 } from 'lucide-react';
 
 export function CookieConsentBanner() {
@@ -103,9 +104,17 @@ export function CookieConsentBanner() {
           </button>
         </div>
 
+        {/* Reassuring Privacy Notice Box */}
+        <div className="p-2.5 rounded-[8px] bg-[var(--accent-mint)]/15 border-[1.5px] border-[var(--accent-mint)] flex items-start gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+          <p className="text-[10.5px] font-bold text-[var(--text-main)] leading-tight">
+            <strong>Privasi 100% Aman:</strong> MarszLive <u>sama sekali tidak mengambil, menyimpan, atau melihat data akun Google kamu</u>. Cookie ini murni diteruskan browser langsung ke server resmi YouTube.
+          </p>
+        </div>
+
         {/* Short explanation */}
         <p className="text-[11px] text-[var(--text-muted)] font-semibold leading-relaxed">
-          Browser selain Chrome (seperti <strong>Safari iPhone, Brave, Samsung Internet</strong>) secara bawaan membatasi cookie pihak ketiga sehingga kotak chat meminta login.
+          Browser selain Chrome (seperti <strong>Safari iPhone, Brave, Samsung Internet</strong>) membatasi cookie pihak ketiga sehingga kotak chat meminta login.
         </p>
 
         {/* Toggle Detailed Guide Accordion */}

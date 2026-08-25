@@ -16,7 +16,8 @@ import {
   X,
   Smartphone,
   ShieldCheck,
-  Globe
+  Globe,
+  Bell
 } from 'lucide-react';
 
 interface ImeStreamPlayerProps {
@@ -41,7 +42,10 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
     );
   }
 
-  const embedDomain = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  const channelHandleClean = stream.channelHandle?.startsWith('@')
+    ? stream.channelHandle
+    : `@${(stream.channelHandle || stream.channelName).replace(/\s+/g, '')}`;
+  const subscribeUrl = `https://www.youtube.com/${channelHandleClean}?sub_confirmation=1`;
   const videoEmbedUrl = `https://www.youtube.com/embed/${stream.videoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0`;
   const chatEmbedUrl = `https://www.youtube.com/live_chat?v=${stream.videoId}&embed_domain=${embedDomain}&dark_theme=1`;
   const youtubeWatchUrl = `https://www.youtube.com/watch?v=${stream.videoId}`;
@@ -116,6 +120,18 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+              {/* Subscribe Button */}
+              <a
+                href={subscribeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="neo-btn neo-btn-red text-xs py-2 px-3 shadow-[2px_2px_0px_var(--shadow-color)]"
+                title={`Subscribe ke channel YouTube ${stream.channelName}`}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>Subscribe</span>
+              </a>
+
               {/* Toggle Embedded Chat */}
               <button
                 onClick={() => setShowChat(!showChat)}
