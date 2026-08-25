@@ -108,7 +108,7 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
 
                 {/* Gang Tags */}
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                  {stream.gangs.map((g) => (
+                  {(Array.isArray(stream.gangs) ? stream.gangs : []).map((g) => (
                     <span
                       key={g}
                       className="text-[10px] font-black px-2 py-0.5 rounded-[6px] bg-[var(--primary)] text-[#18181b] border-[1.5px] border-[var(--border-color)] shadow-[1px_1px_0px_var(--shadow-color)]"

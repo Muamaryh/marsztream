@@ -47,7 +47,7 @@ const MultiViewSlot = memo(function MultiViewSlot({
             <optgroup label={`Anggota ${gangDisplayName} (${streamPool.length} Live)`}>
               {streamPool.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.channelName} [{s.gangs.join(', ')}]
+                  {s.channelName} [{Array.isArray(s.gangs) ? s.gangs.join(', ') : ''}]
                 </option>
               ))}
             </optgroup>
@@ -57,7 +57,7 @@ const MultiViewSlot = memo(function MultiViewSlot({
               <optgroup label="Streamer Gang / Kubu Lain">
                 {otherStreams.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.channelName} [{s.gangs.join(', ')}]
+                    {s.channelName} [{Array.isArray(s.gangs) ? s.gangs.join(', ') : ''}]
                   </option>
                 ))}
               </optgroup>

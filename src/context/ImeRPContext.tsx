@@ -93,7 +93,7 @@ export function ImeRPProvider({ children }: { children: React.ReactNode }) {
 
     // Filter by Gang
     if (selectedGang !== 'ALL') {
-      list = list.filter((s) => s.gangs.includes(selectedGang));
+      list = list.filter((s) => Array.isArray(s.gangs) && s.gangs.includes(selectedGang));
     }
 
     // Filter by Search Query
@@ -101,9 +101,9 @@ export function ImeRPProvider({ children }: { children: React.ReactNode }) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(
         (s) =>
-          s.channelName.toLowerCase().includes(q) ||
-          s.title.toLowerCase().includes(q) ||
-          s.gangs.some((g) => g.toLowerCase().includes(q))
+          (s.channelName || '').toLowerCase().includes(q) ||
+          (s.title || '').toLowerCase().includes(q) ||
+          (Array.isArray(s.gangs) && s.gangs.some((g) => (g || '').toLowerCase().includes(q)))
       );
     }
 

@@ -68,7 +68,7 @@ export function ImeStreamerBar() {
 
                 {/* Gang Tags */}
                 <div className="flex items-center gap-1 mt-1 flex-wrap">
-                  {stream.gangs.slice(0, 2).map((g) => (
+                  {(Array.isArray(stream.gangs) ? stream.gangs : []).slice(0, 2).map((g) => (
                     <span
                       key={g}
                       className={`text-[8px] font-black px-1 py-0.2 rounded-[4px] border border-[var(--border-color)] ${
@@ -78,7 +78,7 @@ export function ImeStreamerBar() {
                       {g}
                     </span>
                   ))}
-                  {stream.gangs.length > 2 && (
+                  {Array.isArray(stream.gangs) && stream.gangs.length > 2 && (
                     <span className="text-[8px] font-extrabold text-[var(--text-muted)]">
                       +{stream.gangs.length - 2}
                     </span>
