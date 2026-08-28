@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ImeStream } from '@/types/imerp';
 import { StreamerAvatar } from '@/components/StreamerAvatar';
+import { toggleLandscapeFullscreen, unlockScreenOrientation } from '@/utils/fullscreen';
 import { 
   MessageSquare, 
   ExternalLink, 
   Radio, 
   Maximize2,
+  Minimize2,
   Tv,
   CheckCircle2,
   Sparkles,
@@ -17,7 +19,8 @@ import {
   Smartphone,
   ShieldCheck,
   Globe,
-  Bell
+  Bell,
+  ScreenShare
 } from 'lucide-react';
 
 interface ImeStreamPlayerProps {
@@ -27,6 +30,37 @@ interface ImeStreamPlayerProps {
 export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
   const [showChat, setShowChat] = useState(true);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+
+  // Monitor fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = Boolean(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      if (!isCurrentlyFullscreen) {
+        unlockScreenOrientation();
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   if (!stream) {
     return (
@@ -61,6 +95,10 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
     );
   };
 
+  const handleFullscreenToggle = () => {
+    toggleLandscapeFullscreen(videoContainerRef.current);
+  };
+
   return (
     <div className="space-y-4">
       {/* Player and Chat Container */}
@@ -68,14 +106,36 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
         
         {/* Video Player Box */}
         <div className="flex-1 min-w-0 w-full flex flex-col gap-3">
-          <div className="relative aspect-video w-full rounded-[16px] overflow-hidden bg-black border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)]">
+          <div 
+            ref={videoContainerRef}
+            className="relative aspect-video w-full rounded-[16px] overflow-hidden bg-black border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)] group"
+          >
             <iframe
               src={videoEmbedUrl}
               title={stream.title}
               className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
             />
+
+            {/* Quick Auto-Landscape Fullscreen Button on Video Player */}
+            <button
+              onClick={handleFullscreenToggle}
+              className="absolute top-3 right-3 z-20 neo-btn neo-btn-secondary py-1.5 px-2.5 text-xs font-black shadow-[2px_2px_0px_var(--shadow-color)] bg-[var(--bg-card)]/90 backdrop-blur-sm opacity-90 hover:opacity-100 hover:scale-105 transition-all flex items-center gap-1.5"
+              title="Full View (Otomatis Putar Layar Horizontal seperti Aplikasi YouTube)"
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-[var(--accent-red)]" />
+                  <span className="hidden sm:inline">Keluar Layar Penuh</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  <span>Full View 📱↻</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Stream Information Card */}
@@ -123,6 +183,16 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+              {/* Auto-Landscape Full View Button */}
+              <button
+                onClick={handleFullscreenToggle}
+                className="neo-btn neo-btn-mint text-xs py-2 px-3 shadow-[2px_2px_0px_var(--shadow-color)] font-black"
+                title="Putar Horizontal Otomatis (Full View seperti Aplikasi YouTube)"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>{isFullscreen ? 'Tutup Full View' : 'Full View (Horizontal)'}</span>
+              </button>
+
               {/* Subscribe Button */}
               <a
                 href={subscribeUrl}
@@ -200,125 +270,122 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
               </div>
               <button
                 onClick={() => setShowGuideModal(true)}
-                className="underline font-black hover:text-[var(--accent-red)] transition-colors shrink-0 ml-1"
+                className="underline hover:opacity-80 shrink-0 font-extrabold ml-2"
               >
-                Lihat Cara Aktifkan 💡
+                Lihat Cara Aktifkan ✨
               </button>
             </div>
 
-            {/* Chat Iframe with #0f0f0f background */}
-            <div className="flex-1 w-full bg-[#0f0f0f] flex flex-col min-h-0">
+            {/* YouTube Live Chat Embedded Iframe */}
+            <div className="flex-1 w-full bg-black relative">
               <iframe
                 src={chatEmbedUrl}
-                title={`Live Chat ${stream.channelName}`}
-                className="w-full h-full border-0 min-w-0 bg-[#0f0f0f]"
+                title="Live Chat"
+                className="w-full h-full border-0"
+                allow="clipboard-write"
               />
             </div>
           </div>
         )}
-
       </div>
 
-      {/* Interactive Modal: How to Enable Direct Chat on Mobile / Safari / Brave */}
+      {/* Guide Modal: Third-Party Cookies for Mobile & Non-Chrome */}
       {showGuideModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="neo-card bg-[var(--bg-card)] w-full max-w-lg p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto border-[3px] border-[var(--border-color)] shadow-[6px_6px_0px_var(--shadow-color)]">
-            
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="neo-card max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b-[2px] border-[var(--border-color)] pb-3">
+            <div className="flex items-center justify-between pb-3 border-b-[2px] border-[var(--border-color)]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-[8px] bg-[var(--primary)] border-[1.5px] border-[var(--border-color)] flex items-center justify-center shadow-[1.5px_1.5px_0px_var(--shadow-color)]">
-                  <ShieldCheck className="w-5 h-5 text-[#18181b]" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm sm:text-base text-[var(--text-main)]">
-                    Cara Kirim Chat Langsung di Web
-                  </h3>
-                  <p className="text-[11px] font-bold text-[var(--text-muted)]">
-                    Tanpa perlu buka tab baru di HP & Browser lain
-                  </p>
-                </div>
+                <Smartphone className="w-5 h-5 text-[var(--accent-red)]" />
+                <h3 className="font-black text-base text-[var(--text-main)]">
+                  Cara Chat Langsung Tanpa Disuruh Login
+                </h3>
               </div>
-
               <button
                 onClick={() => setShowGuideModal(false)}
-                className="w-7 h-7 rounded-[6px] bg-[var(--bg-canvas)] border-[1.5px] border-[var(--border-color)] flex items-center justify-center hover:bg-[var(--accent-red)] hover:text-white transition-colors"
+                className="p-1 rounded-[8px] hover:bg-[var(--bg-canvas)] border-[1.5px] border-transparent hover:border-[var(--border-color)]"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Explanation */}
-            <div className="p-3 bg-[var(--bg-canvas)] rounded-[12px] border-[2px] border-[var(--border-color)] text-xs text-[var(--text-main)] space-y-1.5">
-              <p className="font-black text-[var(--accent-red)]">
-                🔒 Kenapa Browser (Selain Chrome) meminta Login?
-              </p>
-              <p className="font-semibold text-[var(--text-muted)] leading-relaxed">
-                Browser seperti <strong>Safari (iPhone), Brave, Firefox, dan Browser HP</strong> secara bawaan memblokir <em>&quot;Cookie Pihak Ketiga (Cross-Site Tracking)&quot;</em> untuk privasi. Akibatnya, kotak chat di web tidak bisa otomatis membaca akun Google kamu.
-              </p>
+            {/* Modal Content */}
+            <div className="space-y-3.5 text-xs text-[var(--text-muted)] font-bold">
+              <div className="p-3 rounded-[10px] bg-[var(--accent-yellow)] text-[#18181b] border-[2px] border-[var(--border-color)] space-y-1">
+                <p className="font-extrabold text-[13px]">
+                  💡 Kenapa di HP / Safari / Brave disuruh Login lagi?
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Browser HP dan non-Chrome secara bawaan memblokir <em>&quot;Third-Party Cookies&quot;</em> untuk iframe YouTube. Cukup izinkan 1x agar akun Google kamu langsung tersambung otomatis!
+                </p>
+              </div>
+
+              {/* Zero Data Privacy Guarantee */}
+              <div className="p-3 rounded-[10px] bg-[#ecfdf5] dark:bg-[#064e3b]/30 text-[#065f46] dark:text-[#6ee7b7] border-[2px] border-[#059669] flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#059669]" />
+                <div className="text-[11px] font-bold leading-relaxed">
+                  <span className="font-black">Privasi 100% Aman & Terjamin:</span> MarszLive sama sekali <strong>TIDAK mengambil, menyimpan, merekam, atau melihat data akun Google kamu</strong>. Login sepenuhnya terjadi di server resmi Google/YouTube.
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-black text-[var(--text-main)] text-sm">
+                  Pilih Langkah Sesuai Browser Kamu:
+                </h4>
+
+                {/* Android Chrome */}
+                <div className="p-3 rounded-[10px] bg-[var(--bg-canvas)] border-[2px] border-[var(--border-color)] space-y-1">
+                  <div className="flex items-center gap-2 text-[var(--text-main)] font-black">
+                    <span>📱</span>
+                    <span>Google Chrome di HP Android:</span>
+                  </div>
+                  <ol className="list-decimal list-inside text-[11px] space-y-0.5 pl-1">
+                    <li>Buka menu titik tiga (⋮) di pojok kanan atas Chrome HP.</li>
+                    <li>Pilih <strong>Setelan (Settings)</strong> ➡️ <strong>Setelan Situs (Site Settings)</strong>.</li>
+                    <li>Pilih <strong>Cookie pihak ketiga (Third-party cookies)</strong>.</li>
+                    <li>Pilih <strong>&quot;Izinkan cookie pihak ketiga&quot;</strong>.</li>
+                  </ol>
+                </div>
+
+                {/* iPhone Safari */}
+                <div className="p-3 rounded-[10px] bg-[var(--bg-canvas)] border-[2px] border-[var(--border-color)] space-y-1">
+                  <div className="flex items-center gap-2 text-[var(--text-main)] font-black">
+                    <span>🍎</span>
+                    <span>iPhone / iPad (Safari):</span>
+                  </div>
+                  <ol className="list-decimal list-inside text-[11px] space-y-0.5 pl-1">
+                    <li>Buka <strong>Pengaturan (Settings) iOS</strong> HP kamu.</li>
+                    <li>Scroll ke bawah dan pilih <strong>Safari</strong>.</li>
+                    <li>Matikan opsi <strong>&quot;Prevent Cross-Site Tracking&quot;</strong> dan <strong>&quot;Block All Cookies&quot;</strong>.</li>
+                  </ol>
+                </div>
+
+                {/* Brave Browser */}
+                <div className="p-3 rounded-[10px] bg-[var(--bg-canvas)] border-[2px] border-[var(--border-color)] space-y-1">
+                  <div className="flex items-center gap-2 text-[var(--text-main)] font-black">
+                    <span>🦁</span>
+                    <span>Brave Browser:</span>
+                  </div>
+                  <p className="text-[11px] pl-1">
+                    Klik ikon <strong>Brave Shield (Singa)</strong> di sebelah kolom alamat URL, lalu ubah <em>&quot;Cross-site trackers blocked&quot;</em> menjadi <strong>Disabled</strong> untuk website ini.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Step by Step per Browser */}
-            <div className="space-y-2.5 text-xs text-[var(--text-main)] font-semibold">
-              <p className="font-black text-sm text-[var(--text-main)] flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[var(--primary)]" />
-                Pilih browser yang kamu gunakan:
-              </p>
-
-              {/* Option 1: iPhone / Safari */}
-              <div className="p-3 rounded-[10px] bg-[var(--bg-card)] border-[2px] border-[var(--border-color)] shadow-[2px_2px_0px_var(--shadow-color)] space-y-1">
-                <span className="font-black text-[var(--accent-red)] flex items-center gap-1">
-                  🍎 Pengguna iPhone / Safari:
-                </span>
-                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                  Buka <strong>Pengaturan iPhone (Settings)</strong> ➡️ pilih <strong>Safari</strong> ➡️ matikan (OFF) pilihan <strong>&quot;Prevent Cross-Site Tracking&quot;</strong> (Cegah Pelacakan Lintas Situs) ➡️ lalu refresh web ini. Kotak chat akan langsung login otomatis!
-                </p>
-              </div>
-
-              {/* Option 2: Brave Browser */}
-              <div className="p-3 rounded-[10px] bg-[var(--bg-card)] border-[2px] border-[var(--border-color)] shadow-[2px_2px_0px_var(--shadow-color)] space-y-1">
-                <span className="font-black text-[var(--accent-mint)] flex items-center gap-1">
-                  🦁 Pengguna Brave Browser:
-                </span>
-                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                  Klik ikon singa <strong>Brave Shields</strong> di sebelah address bar ➡️ Matikan Shields atau ubah <em>&quot;Block Cross-site Cookies&quot;</em> menjadi <strong>&quot;Allow Cookies&quot;</strong>.
-                </p>
-              </div>
-
-              {/* Option 3: Chrome / Samsung Internet di HP */}
-              <div className="p-3 rounded-[10px] bg-[var(--bg-card)] border-[2px] border-[var(--border-color)] shadow-[2px_2px_0px_var(--shadow-color)] space-y-1">
-                <span className="font-black text-[var(--accent-blue)] flex items-center gap-1">
-                  📱 Chrome / Samsung Internet di HP:
-                </span>
-                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                  Buka Setelan Browser ➡️ <strong>Setelan Situs / Privasi</strong> ➡️ <strong>Cookie Pihak Ketiga</strong> ➡️ pilih <strong>Izinkan Cookie Pihak Ketiga</strong>.
-                </p>
-              </div>
-
-              {/* Option 4: Fitur Layar Belah (Split Screen) */}
-              <div className="p-3 rounded-[10px] bg-[var(--bg-card)] border-[2px] border-[var(--border-color)] shadow-[2px_2px_0px_var(--shadow-color)] space-y-1">
-                <span className="font-black text-[var(--accent-purple)] flex items-center gap-1">
-                  ⚡ Alternatif Terbaik di HP (Tanpa Ganti Setelan):
-                </span>
-                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                  Gunakan fitur bawaan HP <strong>&quot;Split Screen / Layar Terbelah&quot;</strong> atau <strong>&quot;Pop-up View&quot;</strong> untuk membuka MarszLive sambil membuka aplikasi YouTube di bawahnya!
-                </p>
-              </div>
+            {/* Modal Footer */}
+            <div className="pt-3 border-t-[2px] border-[var(--border-color)] flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="neo-btn neo-btn-primary py-2 px-4 text-xs font-black"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Saya Mengerti</span>
+              </button>
             </div>
-
-            {/* Close Button */}
-            <button
-              onClick={() => setShowGuideModal(false)}
-              className="neo-btn neo-btn-primary w-full py-2.5 font-black text-xs shadow-[3px_3px_0px_var(--shadow-color)] mt-2"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Saya Mengerti & Siap Nonton</span>
-            </button>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
