@@ -1,26 +1,20 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ImeStream } from '@/types/imerp';
 import { StreamerAvatar } from '@/components/StreamerAvatar';
-import { toggleLandscapeFullscreen, unlockScreenOrientation } from '@/utils/fullscreen';
 import { 
   MessageSquare, 
   ExternalLink, 
   Radio, 
   Maximize2,
-  Minimize2,
-  Tv,
   CheckCircle2,
   Sparkles,
-  Send,
   HelpCircle,
   X,
   Smartphone,
   ShieldCheck,
-  Globe,
-  Bell,
-  ScreenShare
+  Bell
 } from 'lucide-react';
 
 interface ImeStreamPlayerProps {
@@ -30,37 +24,6 @@ interface ImeStreamPlayerProps {
 export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
   const [showChat, setShowChat] = useState(true);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-
-  // Monitor fullscreen change events
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = Boolean(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
-
-      if (!isCurrentlyFullscreen) {
-        unlockScreenOrientation();
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, []);
 
   if (!stream) {
     return (
@@ -95,10 +58,6 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
     );
   };
 
-  const handleFullscreenToggle = () => {
-    toggleLandscapeFullscreen(videoContainerRef.current);
-  };
-
   return (
     <div className="space-y-4">
       {/* Player and Chat Container */}
@@ -106,36 +65,14 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
         
         {/* Video Player Box */}
         <div className="flex-1 min-w-0 w-full flex flex-col gap-3">
-          <div 
-            ref={videoContainerRef}
-            className="relative aspect-video w-full rounded-[16px] overflow-hidden bg-black border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)] group"
-          >
+          <div className="relative aspect-video w-full rounded-[16px] overflow-hidden bg-black border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)]">
             <iframe
               src={videoEmbedUrl}
               title={stream.title}
               className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
               allowFullScreen
             />
-
-            {/* Quick Auto-Landscape Fullscreen Button on Video Player */}
-            <button
-              onClick={handleFullscreenToggle}
-              className="absolute top-3 right-3 z-20 neo-btn neo-btn-secondary py-1.5 px-2.5 text-xs font-black shadow-[2px_2px_0px_var(--shadow-color)] bg-[var(--bg-card)]/90 backdrop-blur-sm opacity-90 hover:opacity-100 hover:scale-105 transition-all flex items-center gap-1.5"
-              title="Full View (Otomatis Putar Layar Horizontal seperti Aplikasi YouTube)"
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="w-3.5 h-3.5 text-[var(--accent-red)]" />
-                  <span className="hidden sm:inline">Keluar Layar Penuh</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="w-3.5 h-3.5 text-[var(--primary)]" />
-                  <span>Full View 📱↻</span>
-                </>
-              )}
-            </button>
           </div>
 
           {/* Stream Information Card */}
@@ -183,16 +120,6 @@ export function ImeStreamPlayer({ stream }: ImeStreamPlayerProps) {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-              {/* Auto-Landscape Full View Button */}
-              <button
-                onClick={handleFullscreenToggle}
-                className="neo-btn neo-btn-mint text-xs py-2 px-3 shadow-[2px_2px_0px_var(--shadow-color)] font-black"
-                title="Putar Horizontal Otomatis (Full View seperti Aplikasi YouTube)"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>{isFullscreen ? 'Tutup Full View' : 'Full View (Horizontal)'}</span>
-              </button>
-
               {/* Subscribe Button */}
               <a
                 href={subscribeUrl}

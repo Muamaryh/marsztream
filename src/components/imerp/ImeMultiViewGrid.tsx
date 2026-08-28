@@ -3,16 +3,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { useImeRP } from '@/context/ImeRPContext';
 import { ImeStream } from '@/types/imerp';
-import { toggleLandscapeFullscreen, unlockScreenOrientation } from '@/utils/fullscreen';
-import { 
-  LayoutGrid, 
-  Columns, 
-  Square, 
-  LayoutTemplate, 
-  Radio, 
-  Maximize2,
-  Minimize2
-} from 'lucide-react';
+import { LayoutGrid, Columns, Square, LayoutTemplate, Radio } from 'lucide-react';
 
 interface MultiViewSlotProps {
   slotIdx: number;
@@ -33,43 +24,12 @@ const MultiViewSlot = memo(function MultiViewSlot({
   gangDisplayName,
   onSlotChange,
 }: MultiViewSlotProps) {
-  const slotRef = useRef<HTMLDivElement>(null);
-  const [isSlotFullscreen, setIsSlotFullscreen] = useState(false);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = Boolean(
-        document.fullscreenElement === slotRef.current ||
-        (document as any).webkitFullscreenElement === slotRef.current
-      );
-      setIsSlotFullscreen(isCurrentlyFullscreen);
-      if (!isCurrentlyFullscreen && document.fullscreenElement === null) {
-        unlockScreenOrientation();
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
   const embedUrl = currentStream
     ? `https://www.youtube.com/embed/${currentStream.videoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0`
     : '';
 
-  const handleSlotFullscreen = () => {
-    toggleLandscapeFullscreen(slotRef.current);
-  };
-
   return (
-    <div 
-      ref={slotRef}
-      className="flex flex-col rounded-[16px] overflow-hidden bg-[var(--bg-card)] border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)] group"
-    >
+    <div className="flex flex-col rounded-[16px] overflow-hidden bg-[var(--bg-card)] border-[2.5px] border-[var(--border-color)] shadow-[4px_4px_0px_var(--shadow-color)]">
       {/* Slot Header with Streamer Dropdown */}
       <div className="px-3.5 py-2.5 bg-[var(--bg-canvas)] border-b-[2px] border-[var(--border-color)] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -110,21 +70,6 @@ const MultiViewSlot = memo(function MultiViewSlot({
             </span>
           )}
         </div>
-
-        {/* Fullscreen Horizontal Button */}
-        {currentStream && (
-          <button
-            onClick={handleSlotFullscreen}
-            className="neo-btn neo-btn-secondary p-1.5 text-xs font-black shadow-[1px_1px_0px_var(--shadow-color)] shrink-0"
-            title="Full View Horizontal Streamer Ini"
-          >
-            {isSlotFullscreen ? (
-              <Minimize2 className="w-3.5 h-3.5 text-[var(--accent-red)]" />
-            ) : (
-              <Maximize2 className="w-3.5 h-3.5 text-[var(--text-main)]" />
-            )}
-          </button>
-        )}
       </div>
 
       {/* Video Player */}
@@ -135,7 +80,7 @@ const MultiViewSlot = memo(function MultiViewSlot({
             src={embedUrl}
             title={currentStream.title}
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
           />
         ) : (
@@ -151,29 +96,6 @@ const MultiViewSlot = memo(function MultiViewSlot({
 
 export function ImeMultiViewGrid() {
   const { streams, filteredStreams, selectedGang, gangs, layout, setLayout } = useImeRP();
-  const gridContainerRef = useRef<HTMLDivElement>(null);
-  const [isGridFullscreen, setIsGridFullscreen] = useState(false);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = Boolean(
-        document.fullscreenElement === gridContainerRef.current ||
-        (document as any).webkitFullscreenElement === gridContainerRef.current
-      );
-      setIsGridFullscreen(isCurrentlyFullscreen);
-      if (!isCurrentlyFullscreen && document.fullscreenElement === null) {
-        unlockScreenOrientation();
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
 
   // Active gang metadata
   const currentGangObj = gangs.find((g) => g.id === selectedGang);
@@ -215,10 +137,6 @@ export function ImeMultiViewGrid() {
     });
   };
 
-  const handleGridFullscreen = () => {
-    toggleLandscapeFullscreen(gridContainerRef.current);
-  };
-
   const getGridClass = () => {
     switch (layout) {
       case '1':
@@ -252,7 +170,7 @@ export function ImeMultiViewGrid() {
           </span>
         </div>
 
-        {/* 2D Segmented Buttons & Full View Button */}
+        {/* 2D Segmented Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setLayout('1')}
@@ -293,33 +211,11 @@ export function ImeMultiViewGrid() {
             <LayoutGrid className="w-3.5 h-3.5" />
             <span>4 Stream</span>
           </button>
-
-          {/* Full Grid Landscape Button */}
-          <button
-            onClick={handleGridFullscreen}
-            className="neo-btn neo-btn-mint text-xs py-1.5 px-3 font-black shadow-[2px_2px_0px_var(--shadow-color)]"
-            title="Layar Penuh Multi-Stream (Otomatis Putar Horizontal)"
-          >
-            {isGridFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-[var(--accent-red)]" />
-                <span>Keluar Full View</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>Full View 📱↻</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
 
       {/* Grid of Stream Slots */}
-      <div 
-        ref={gridContainerRef}
-        className={`grid ${getGridClass()} gap-4 ${isGridFullscreen ? 'p-2 bg-black h-screen w-screen overflow-auto' : ''}`}
-      >
+      <div className={`grid ${getGridClass()} gap-4`}>
         {Array.from({ length: activeSlotCount }).map((_, slotIdx) => {
           const selectedStreamId =
             slotStreamIds[slotIdx] ||
