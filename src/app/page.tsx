@@ -13,6 +13,7 @@ import {
   Sparkles, 
   Loader2, 
   CheckCircle2,
+  Smartphone,
   Users,
   ShieldAlert
 } from 'lucide-react';
@@ -25,6 +26,8 @@ export default function HomePage() {
     layout,
     setLayout,
     isLoading,
+    wakeLockEnabled,
+    toggleWakeLock,
   } = useImeRP();
 
   if (isLoading && !streams.length) {
@@ -49,8 +52,21 @@ export default function HomePage() {
             </span>
             <span className="neo-badge bg-[var(--accent-mint)]">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#18181b]" />
-              Auto Filter #IMERP & Gangs
+              Filter Ketat #imeroleplay & #imerp
             </span>
+            <button
+              type="button"
+              onClick={toggleWakeLock}
+              className={`neo-badge cursor-pointer transition-transform hover:-translate-y-0.5 ${
+                wakeLockEnabled
+                  ? 'bg-[var(--accent-yellow)] text-[#18181b]'
+                  : 'bg-[var(--bg-canvas)] text-[var(--text-muted)]'
+              }`}
+              title="Klik untuk mengaktifkan/menonaktifkan fitur layar tetap menyala otomatis"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Layar Always-On: {wakeLockEnabled ? 'AKTIF' : 'OFF'}</span>
+            </button>
           </div>
 
           <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[var(--text-main)] tracking-tight">

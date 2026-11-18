@@ -13,12 +13,21 @@ import {
   Search,
   CheckCircle2,
   Sparkles,
+  Smartphone,
   X
 } from 'lucide-react';
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { totalLive, refresh, isLoading, searchQuery, setSearchQuery } = useImeRP();
+  const {
+    totalLive,
+    refresh,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    wakeLockEnabled,
+    toggleWakeLock,
+  } = useImeRP();
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[var(--bg-card)] border-b-[2.5px] border-[var(--border-color)] transition-colors">
@@ -72,6 +81,32 @@ export function Navbar() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
+          {/* Always-On Screen Wake Lock Toggle (Active by default like YouTube) */}
+          <button
+            onClick={toggleWakeLock}
+            className={`px-2.5 py-2 rounded-[8px] border-[2px] border-[var(--border-color)] shadow-[2px_2px_0px_var(--shadow-color)] hover:-translate-y-0.5 transition-transform active:translate-y-0.5 flex items-center gap-1.5 text-[11px] font-black ${
+              wakeLockEnabled
+                ? 'bg-[var(--accent-mint)] text-[#18181b]'
+                : 'bg-[var(--bg-canvas)] text-[var(--text-muted)]'
+            }`}
+            title={
+              wakeLockEnabled
+                ? 'Layar Always-On Aktif: Layar HP/PC tidak akan mati saat menonton stream (Klik untuk matikan)'
+                : 'Layar Always-On Nonaktif (Klik untuk aktifkan agar layar tidak mati)'
+            }
+            aria-label="Toggle Screen Always On"
+          >
+            <Smartphone className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">
+              {wakeLockEnabled ? 'Always-On' : 'Layar Normal'}
+            </span>
+            <span
+              className={`w-2 h-2 rounded-full border border-[#18181b] ${
+                wakeLockEnabled ? 'bg-[#18181b] animate-pulse' : 'bg-zinc-400'
+              }`}
+            />
+          </button>
+
           {/* Refresh Button */}
           <button
             onClick={refresh}

@@ -13,6 +13,9 @@ interface CacheData {
 let cachedData: CacheData | null = null;
 const CACHE_TTL_MS = 15 * 1000; // 15 seconds fast cache
 
+// Strict regex: stream title MUST contain exact hashtag #imeroleplay or #imerp (case-insensitive)
+const IME_HASHTAG_REGEX = /#(imeroleplay|imerp)(?![a-z0-9_])/i;
+
 // Alias mapping to consolidate duplicate gang names into one canonical ID
 const GANG_ALIASES: Record<string, string> = {
   ANAKCEOKOPAT: 'CEOKOPAT',
@@ -24,6 +27,9 @@ const GANG_ALIASES: Record<string, string> = {
   POLISI: 'IMEPOLICE',
   POLICE: 'IMEPOLICE',
   IMEPOLICE: 'IMEPOLICE',
+  IMESHERIFF: 'LSSD',
+  SHERIFF: 'LSSD',
+  LSSD: 'LSSD',
   DSG: 'DOBRAK',
   DOBRAKSOLID: 'DOBRAK',
   DOBRAKGANG: 'DOBRAK',
@@ -35,18 +41,28 @@ const GANG_ALIASES: Record<string, string> = {
   HOPE: 'HOPE',
   DOC: 'IMEDOC',
   IMEDOC: 'IMEDOC',
+  EMSIME: 'EMS',
+  IMEMEDICALCENTER: 'EMS',
   BURGENK: 'BORGEN',
   BORGEN: 'BORGEN',
   NSN969: 'NSN',
   '969GARAGE': 'NSN',
+  KERTA969: 'KERTA969',
+  KERTASOA969: 'KERTA969',
   NAKAMAMC: 'NAKAMA',
   NMC: 'NAKAMA',
   NAKAMA: 'NAKAMA',
+  MFL: 'MAPENDOS',
+  MAPENDOS: 'MAPENDOS',
+  WTBOT: 'WTGG',
+  WTGG: 'WTGG',
   LILIS: 'BOCILORILILIS',
   BOCILORILILIS: 'BOCILORILILIS',
   VAGABOND: 'VAGABOND',
   OLSEN: 'OLSEN',
   KZN: 'KZN',
+  HIGHTABLE: 'HIGHTABLE',
+  OMC: 'OMC',
 };
 
 // Known factions / gangs with friendly display names & emojis
@@ -64,218 +80,213 @@ const KNOWN_GANG_METADATA: Record<string, { name: string; icon: string }> = {
   EMS: { name: 'EMS / Medis', icon: '🚑' },
   IMEDOC: { name: 'DOC / Penjara', icon: '🏢' },
   DOJ: { name: 'DOJ / Hakim', icon: '⚖️' },
+  WTGG: { name: 'WTGG', icon: '🎮' },
+  MAPENDOS: { name: 'Mapendos (MFL)', icon: '👺' },
+  NAKAMA: { name: 'Nakama MC', icon: '🏍️' },
+  BMC: { name: 'BMC', icon: '🏍️' },
+  OMC: { name: 'OMC', icon: '🏍️' },
+  HIGHTABLE: { name: 'High Table', icon: '🎩' },
+  KERTA969: { name: 'Kerta 969', icon: '🔥' },
   SWAG: { name: 'SWAG', icon: '💎' },
   COUGANFAMS: { name: 'Cougan Fams', icon: '🐺' },
   LAWLESS: { name: 'Lawless', icon: '⚖️' },
   BFL: { name: 'BFL', icon: '🔥' },
-  MAPENDOS: { name: 'Mapendos', icon: '👺' },
   BORGEN: { name: 'Borgen (Burgenk)', icon: '🐺' },
-  BURGENK: { name: 'Borgen (Burgenk)', icon: '🐺' },
   PIRATES: { name: 'Pirates', icon: '🏴‍☠️' },
   WARLOCKS: { name: 'Warlocks', icon: '🧙' },
   NORTENOS: { name: 'Nortenos', icon: '🔴' },
   SANTOS: { name: 'Santos', icon: '🌴' },
   BOA: { name: 'BOA', icon: '🐍' },
   DOBRAK: { name: 'Dobrak (DSG)', icon: '👊' },
-  BMC: { name: 'BMC', icon: '🏍️' },
   BOCILORILILIS: { name: 'Bocil Lilis', icon: '🌸' },
   BLACKJACK: { name: 'Blackjack', icon: '🃏' },
   OVERKILL: { name: 'Overkill', icon: '💀' },
   THELOST: { name: 'The Lost', icon: '🦅' },
   JAWA: { name: 'Jawa', icon: '🏝️' },
   HOPE: { name: 'Hope', icon: '🕊️' },
-  NAKAMA: { name: 'Nakama MC', icon: '🏍️' },
   JRZ: { name: 'JRZ', icon: '⚡' },
   RATAGANG: { name: 'Rata Gang', icon: '💥' },
-  WTGG: { name: 'WTGG', icon: '🎮' },
   NSN: { name: 'NSN 969', icon: '🚗' },
   SHINIGAMI: { name: 'Shinigami', icon: '☠️' },
   PINKPANTHER: { name: 'Pink Panther', icon: '🐆' },
   WINDAHBASUDARA: { name: 'Windah Basudara', icon: '👑' },
 };
 
+const JUNK_TAGS = new Set([
+  'IMERP',
+  'IMEROLEPLAY',
+  'IME',
+  'IMESTRONG',
+  'RP',
+  'ROLEPLAY',
+  'ROLEPLAYINDONESIA',
+  'GTA',
+  'GTAV',
+  'GTA5',
+  'GTA5RP',
+  'GTARP',
+  'GTA6',
+  'GTAVI',
+  'GTAONLINE',
+  'FIVEM',
+  'REDM',
+  'LIVE',
+  'LIVESTREAM',
+  'STREAM',
+  'STREAMING',
+  'SHORTS',
+  'SHORTSLIVE',
+  'GAMING',
+  'GAMINGLIVESTREAM',
+  'INDONESIA',
+  'SUBATHON',
+  'MEMBERSHIP',
+  'TIKTOK',
+  'DISCORD',
+  'DONASI',
+  'SAWERIA',
+  'BAGIBAGI',
+  'SOCIABUZZ',
+  'TAKO',
+  'MOD',
+  'GRAPHIC',
+  'FIVEGUARD',
+  'VOICE',
+  'VIRAL',
+  'FYP',
+  'TRENDING',
+  'DAILY',
+  'INDOPRIDE',
+  'INDOPRIDERP',
+  'POLISIIDP',
+  'KOTAKITARP',
+  'MOTIONIME',
+  'MOTIONLIFERP',
+  'EXECUTIVERP',
+  'PERINTISBUKANPEWARIS',
+  'OMCASIK',
+  'ROBRUN',
+  'FREEFIRE',
+  'MOBILELEGENDS',
+  'MLBB',
+  'APEXLEGENDS',
+  'VALORANT',
+  'DOTA',
+  'DOTA2',
+  'INVOKER',
+  'CS2',
+  'PUBG',
+  'ROBLOX',
+  'MINECRAFT',
+]);
+
 function isValidGangTag(tag: string): boolean {
   const upper = tag.toUpperCase().trim();
   if (!upper || upper.length < 2) return false;
   if (/^\d+$/.test(upper)) return false;
 
-  if (upper !== 'IMEPOLICE' && upper !== 'IMEDOC') {
+  if (upper !== 'IMEPOLICE' && upper !== 'IMEDOC' && upper !== 'IMESHERIFF') {
     if (upper.endsWith('RP') || upper.startsWith('RP') || upper.includes('ROLEPLAY')) {
       return false;
     }
   }
 
-  const junkWords = [
-    'IMERP',
-    'IMEROLEPLAY',
-    'IME',
-    'RP',
-    'ROLEPLAY',
-    'GTA',
-    'GTAV',
-    'GTA5',
-    'FIVEM',
-    'LIVE',
-    'LIVESTREAM',
-    'STREAM',
-    'STREAMING',
-    'INDONESIA',
-    'SUBATHON',
-    'MEMBERSHIP',
-    'TIKTOK',
-    'DISCORD',
-    'DONASI',
-    'SAWERIA',
-    'MOD',
-    'GRAPHIC',
-    'FIVEGUARD',
-    'VOICE',
-    'VIRAL',
-    'FYP',
-    'TRENDING',
-    'INDOPRIDE',
-    'MOTIONIME',
-    'PERINTISBUKANPEWARIS',
-    'OMCASIK',
-    'FREEFIRE',
-    'MOBILELEGENDS',
-    'MLBB',
-    'APEXLEGENDS',
-    'VALORANT',
-  ];
-
-  if (junkWords.includes(upper)) return false;
+  if (JUNK_TAGS.has(upper)) return false;
   return true;
 }
 
-function isImeRPStream(title: string, channelName: string): boolean {
-  const lower = `${title} ${channelName}`.toLowerCase();
+function hasExactWord(upperText: string, word: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^A-Z0-9_])${escaped}([^A-Z0-9_]|$)`).test(upperText);
+}
 
-  // Strict Exclusion for unrelated content
+/**
+ * Strict IME Roleplay Stream Validator:
+ * 1. Title MUST explicitly include #imeroleplay or #imerp.
+ * 2. Excludes 24/7 radio/prayer/unrelated non-GTA games where streamer left old #imerp tag in title.
+ */
+function isImeRPStream(title: string): boolean {
+  if (!title || !IME_HASHTAG_REGEX.test(title)) {
+    return false;
+  }
+
+  const lowerTitle = title.toLowerCase();
+
+  // Guard against 24/7 loops or blatant non-GTA games unless GTA/Kota/FiveM is also mentioned
   if (
-    lower.includes('alan becker') ||
-    lower.includes('adventure time') ||
-    lower.includes('warner bros') ||
-    lower.includes('skylinewebcams') ||
-    lower.includes('webcam') ||
-    lower.includes('pubg') ||
-    lower.includes('playerunknown') ||
-    lower.includes('blox fruit') ||
-    lower.includes('roblox') ||
-    lower.includes('skibidi') ||
-    lower.includes('brainrot') ||
-    lower.includes('blood of jesus') ||
-    lower.includes('prayer') ||
-    lower.includes('back 4 blood') ||
-    lower.includes('back 4 bloods') ||
-    lower.includes('cakrawala') ||
-    lower.includes('free fire') ||
-    lower.includes('mobile legends') ||
-    lower.includes('mlbb') ||
-    lower.includes('radio 24/7') ||
-    lower.includes('relaxing') ||
-    lower.includes('crypto') ||
-    lower.includes('asmr') ||
-    lower.includes('resort') ||
-    lower.includes('parking lot') ||
-    lower.includes('gravity falls')
+    lowerTitle.includes('radio 24/7') ||
+    lowerTitle.includes('24/7 live') ||
+    lowerTitle.includes('blood of jesus') ||
+    lowerTitle.includes('skylinewebcams') ||
+    lowerTitle.includes('cakrawalacounty')
   ) {
     return false;
   }
 
-  return (
-    lower.includes('imeroleplay') ||
-    lower.includes('imerp') ||
-    lower.includes('ime rp') ||
-    lower.includes('ime roleplay') ||
-    lower.includes('#ime') ||
-    lower.includes('ime siti') ||
-    lower.includes('ime city') ||
-    lower.includes('ime server') ||
-    lower.includes('vagabond') ||
-    lower.includes('4blood') ||
-    lower.includes('4bloods') ||
-    lower.includes('olsen') ||
-    lower.includes('kzn') ||
-    lower.includes('ceokopat') ||
-    lower.includes('anakceokopat') ||
-    lower.includes('ceokotak') ||
-    lower.includes('anakceokotak') ||
-    lower.includes('burgenk') ||
-    lower.includes('borgen') ||
-    lower.includes('mapendos') ||
-    lower.includes('bfl') ||
-    lower.includes('5tar') ||
-    lower.includes('kcg') ||
-    lower.includes('jawa') ||
-    lower.includes('nakama') ||
-    lower.includes('dobrak') ||
-    lower.includes('swag') ||
-    lower.includes('couganfams') ||
-    lower.includes('lawless') ||
-    lower.includes('shinigami') ||
-    lower.includes('imepolice') ||
-    lower.includes('imedoc') ||
-    lower.includes('emsime') ||
-    lower.includes('imemedicalcenter') ||
-    lower.includes('goldenboy') ||
-    lower.includes('loudboyz') ||
-    lower.includes('barongfams') ||
-    lower.includes('redstone') ||
-    lower.includes('chaser') ||
-    lower.includes('samdre')
+  const hasExplicitOtherGame = /#(dota2?|mlbb|mobilelegends|freefire|pubg|pubgm|roblox|bloxfruits?|minecraft|efootball|fc25)\b/i.test(
+    title
   );
+  if (hasExplicitOtherGame && !/\b(kota|gta\s*[5v]?|fivem)\b/i.test(title)) {
+    return false;
+  }
+
+  return true;
 }
 
 function processVideoItem(
   v: any,
-  streamMap: Map<string, ImeStream & { viewerNum?: number }>,
-  associatedGang?: string
+  streamMap: Map<string, ImeStream & { viewerNum?: number }>
 ) {
   if (!v || !v.videoId) return;
 
-  // RULE 1: If lengthText exists (e.g. "4:23:48" or "1:15:20"), it is a FINISHED/RECORDED VOD! DISCARD!
-  if (v.lengthText) return;
+  // RULE 1: Exclude finished VODs (have lengthText) and unstarted scheduled streams (have upcomingEventData)
+  if (v.lengthText || v.upcomingEventData) return;
 
-  // RULE 2: Must have explicit BADGE_STYLE_TYPE_LIVE_NOW in badges
+  // RULE 2: Must have explicit LIVE_NOW indicator in badges or thumbnail overlay
   const badgesStr = JSON.stringify(v.badges || []);
-  if (!badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW')) return;
+  const overlayStr = JSON.stringify(v.thumbnailOverlays || []);
+  const isCurrentlyLive =
+    badgesStr.includes('BADGE_STYLE_TYPE_LIVE_NOW') ||
+    overlayStr.includes('"style":"LIVE"');
+  if (!isCurrentlyLive) return;
 
   const title = v.title?.runs?.map((r: any) => r.text).join('') || '';
   const channelName = v.ownerText?.runs?.[0]?.text || 'Streamer';
 
-  // RULE 3: Strict IME Roleplay filter
-  if (!isImeRPStream(title, channelName)) return;
+  // RULE 3: Strict #imeroleplay / #imerp hashtag filter on stream title
+  if (!isImeRPStream(title)) return;
 
   const videoId = v.videoId;
 
-  // 1. Extract hashtags & tags
+  // Extract gang hashtags strictly from the stream's own title (never force search query's gangId!)
   const rawTags = (title.match(/#([a-zA-Z0-9_.-]+)/g) || []).map((t: string) =>
     t.replace('#', '').toUpperCase()
   );
 
   const uniqueTags = new Set<string>();
-  if (associatedGang && isValidGangTag(associatedGang)) {
-    const canonical = GANG_ALIASES[associatedGang] || associatedGang;
-    uniqueTags.add(canonical);
-  }
 
   for (const tag of rawTags) {
-    if (isValidGangTag(tag)) {
-      const canonicalTag = GANG_ALIASES[tag] || tag;
-      uniqueTags.add(canonicalTag);
+    const mapped = GANG_ALIASES[tag] || tag;
+    if (isValidGangTag(mapped)) {
+      uniqueTags.add(mapped);
     }
   }
 
+  // Also check whole-word matches in title for known gangs if streamer wrote gang name without '#'
   const upperTitle = title.toUpperCase();
   for (const key of Object.keys(KNOWN_GANG_METADATA)) {
-    if (upperTitle.includes(key) && isValidGangTag(key)) {
+    if (key.length >= 3 && hasExactWord(upperTitle, key) && isValidGangTag(key)) {
       const canonicalTag = GANG_ALIASES[key] || key;
       uniqueTags.add(canonicalTag);
     }
   }
+  for (const [alias, canonical] of Object.entries(GANG_ALIASES)) {
+    if (alias.length >= 3 && hasExactWord(upperTitle, alias) && isValidGangTag(canonical)) {
+      uniqueTags.add(canonical);
+    }
+  }
 
-  // If already in map, merge the new gang tags
+  // If already in map, merge any extracted gang tags
   if (streamMap.has(videoId)) {
     const existing = streamMap.get(videoId)!;
     const mergedGangs = new Set(existing.gangs.filter((g) => g !== 'CIVILIAN'));
@@ -303,7 +314,7 @@ function processVideoItem(
 
   // Parse numeric viewer count for sorting
   let viewerNum = 0;
-  const matchNum = rawViewCountText.replace(/\./g, '').match(/(\d+)/);
+  const matchNum = rawViewCountText.replace(/[.,]/g, '').match(/(\d+)/);
   if (matchNum) viewerNum = parseInt(matchNum[1], 10);
 
   const finalGangs = uniqueTags.size > 0 ? Array.from(uniqueTags) : ['CIVILIAN'];
@@ -322,86 +333,54 @@ function processVideoItem(
   });
 }
 
-const GANG_SEARCH_QUERIES: Array<{ query: string; gangId?: string }> = [
-  // General IME Roleplay queries
-  { query: 'imeroleplay' },
-  { query: '#imeroleplay' },
-  { query: 'imerp' },
-  { query: '#imerp' },
-  { query: 'ime roleplay' },
-  { query: 'gta imerp' },
+// Targeted discovery queries: ALL paired with imeroleplay / imerp to maximize genuine stream coverage
+// beyond YouTube's 20-item per-page search cap without pulling random unrelated streams.
+const SEARCH_QUERIES: string[] = [
+  // Core IME Roleplay hashtags & keywords
+  '#imeroleplay',
+  '#imerp',
+  'imeroleplay',
+  'imerp',
+  '"#imeroleplay"',
+  '"#imerp"',
 
-  // 4Blood
-  { query: '4blood imeroleplay', gangId: '4BLOOD' },
-  { query: '4blood imerp', gangId: '4BLOOD' },
-  { query: '#4blood', gangId: '4BLOOD' },
-  { query: '#4bloods', gangId: '4BLOOD' },
-  { query: '4blood', gangId: '4BLOOD' },
-
-  // Vagabond
-  { query: 'vagabond imeroleplay', gangId: 'VAGABOND' },
-  { query: 'vagabond imerp', gangId: 'VAGABOND' },
-  { query: '#vagabond', gangId: 'VAGABOND' },
-
-  // KZN
-  { query: 'kzn imeroleplay', gangId: 'KZN' },
-  { query: 'kzn imerp', gangId: 'KZN' },
-  { query: '#kzn', gangId: 'KZN' },
-
-  // Olsen
-  { query: 'olsen imeroleplay', gangId: 'OLSEN' },
-  { query: 'olsen imerp', gangId: 'OLSEN' },
-  { query: '#olsen', gangId: 'OLSEN' },
-
-  // CEO KOPAT & KOTAK
-  { query: 'ceokopat imeroleplay', gangId: 'CEOKOPAT' },
-  { query: '#ceokopat', gangId: 'CEOKOPAT' },
-  { query: '#anakceokopat', gangId: 'CEOKOPAT' },
-  { query: 'ceokotak imeroleplay', gangId: 'CEOKOTAK' },
-  { query: '#ceokotak', gangId: 'CEOKOTAK' },
-
-  // 5TAR & KCG
-  { query: '5tar imeroleplay', gangId: '5TAR' },
-  { query: '5tar imerp', gangId: '5TAR' },
-  { query: '#5tar', gangId: '5TAR' },
-  { query: '#kcg', gangId: 'KCG' },
-
-  // BFL & Mapendos
-  { query: 'bfl imeroleplay', gangId: 'BFL' },
-  { query: '#bfl', gangId: 'BFL' },
-  { query: 'mapendos imeroleplay', gangId: 'MAPENDOS' },
-  { query: '#mapendos', gangId: 'MAPENDOS' },
-
-  // Nakama & Dobrak
-  { query: 'nakama imeroleplay', gangId: 'NAKAMA' },
-  { query: '#nakamamc', gangId: 'NAKAMA' },
-  { query: 'dobrak imeroleplay', gangId: 'DOBRAK' },
-  { query: '#dobrakgang', gangId: 'DOBRAK' },
-
-  // SWAG & Cougan Fams & Lawless
-  { query: 'swag imeroleplay', gangId: 'SWAG' },
-  { query: '#swag', gangId: 'SWAG' },
-  { query: '#couganfams', gangId: 'COUGANFAMS' },
-  { query: 'lawless imeroleplay', gangId: 'LAWLESS' },
-  { query: '#lawless', gangId: 'LAWLESS' },
-
-  // Burgenk
-  { query: 'burgenk imeroleplay', gangId: 'BORGEN' },
-  { query: '#burgenk', gangId: 'BORGEN' },
-
-  // Police & Medical
-  { query: 'imepolice imeroleplay', gangId: 'IMEPOLICE' },
-  { query: '#imepolice', gangId: 'IMEPOLICE' },
-  { query: '#imedoc', gangId: 'IMEDOC' },
+  // Major gangs paired with #imeroleplay / #imerp for deep discovery during prime time (50-120+ live)
+  '#anakceokopat #imeroleplay',
+  '#anakceokopat #imerp',
+  '#4blood #imeroleplay',
+  '#4blood #imerp',
+  '#vagabond #imeroleplay',
+  '#vagabond #imerp',
+  '#kzn #imeroleplay',
+  '#kzn #imerp',
+  '#olsen #imeroleplay',
+  '#olsen #imerp',
+  '#5tar #imeroleplay',
+  '#kcg #imeroleplay',
+  '#wtgg #imeroleplay',
+  '#wtgg #imerp',
+  '#mapendos #imeroleplay',
+  '#mfl #imeroleplay',
+  '#nakamamc #imeroleplay',
+  '#awasbmcgalak #imeroleplay',
+  '#dobrak #imeroleplay',
+  '#burgenk #imeroleplay',
+  '#lawless #imeroleplay',
+  '#couganfams #imeroleplay',
+  '#swag #imeroleplay',
+  '#hightable #imeroleplay',
+  '#imepolice #imeroleplay',
+  '#imesheriff #imeroleplay',
+  '#imedoc #imeroleplay',
 ];
 
 async function searchYouTubeQuery(
   query: string,
   streamMap: Map<string, ImeStream & { viewerNum?: number }>,
-  gangId?: string
+  spParam: string = 'EgJAAQ%253D%253D'
 ) {
   try {
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgJAAQ%253D%253D`;
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=${spParam}&hl=id&gl=ID`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -411,7 +390,6 @@ async function searchYouTubeQuery(
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cookie': 'SOCS=CAESEwgDEgk2ODEwNTk2NTQaAmVuIAEaBgiA_LyaBg; PREF=hl=id&gl=ID;',
       },
     });
     clearTimeout(timeoutId);
@@ -427,11 +405,13 @@ async function searchYouTubeQuery(
     for (const sec of sections) {
       const items = sec.itemSectionRenderer?.contents || [];
       for (const item of items) {
-        processVideoItem(item.videoRenderer, streamMap, gangId);
+        if (item.videoRenderer) {
+          processVideoItem(item.videoRenderer, streamMap);
+        }
       }
     }
-  } catch (e) {
-    // ignore
+  } catch {
+    // ignore individual query network/timeout errors
   }
 }
 
@@ -446,11 +426,16 @@ export async function GET(req: NextRequest) {
 
   const streamMap = new Map<string, ImeStream & { viewerNum?: number }>();
 
-  await Promise.allSettled(
-    GANG_SEARCH_QUERIES.map(({ query, gangId }) =>
-      searchYouTubeQuery(query, streamMap, gangId)
-    )
-  );
+  // Also query ViewCount+Live and UploadDate+Live on primary hashtags to catch both top & newly-started streams
+  const tasks: Promise<void>[] = [
+    ...SEARCH_QUERIES.map((query) => searchYouTubeQuery(query, streamMap, 'EgJAAQ%253D%253D')),
+    searchYouTubeQuery('#imeroleplay', streamMap, 'CAMSBAhAAQ%3D%3D'),
+    searchYouTubeQuery('#imerp', streamMap, 'CAMSBAhAAQ%3D%3D'),
+    searchYouTubeQuery('#imeroleplay', streamMap, 'CAISBAhAAQ%3D%3D'),
+    searchYouTubeQuery('#imerp', streamMap, 'CAISBAhAAQ%3D%3D'),
+  ];
+
+  await Promise.allSettled(tasks);
 
   // Convert map to array and sort strictly by viewer count descending (Top active streamers first)
   const streams = Array.from(streamMap.values())
@@ -491,14 +476,15 @@ export async function GET(req: NextRequest) {
 
   gangs.push(...sortedKnownGangs);
 
-  // Add remaining active gangs not in known metadata
+  // Add remaining active gangs not in known metadata (sorted by count descending)
+  const dynamicGangs: ImeGang[] = [];
   for (const [gangId, count] of gangCountMap.entries()) {
     if (
       gangId !== 'CIVILIAN' &&
       !KNOWN_GANG_METADATA[gangId] &&
       !gangs.some((g) => g.id === gangId)
     ) {
-      gangs.push({
+      dynamicGangs.push({
         id: gangId,
         name: gangId,
         count,
@@ -506,6 +492,8 @@ export async function GET(req: NextRequest) {
       });
     }
   }
+  dynamicGangs.sort((a, b) => b.count - a.count);
+  gangs.push(...dynamicGangs);
 
   // Add Civilian / Other category at the end if present
   const civilianCount = gangCountMap.get('CIVILIAN') || 0;

@@ -167,7 +167,7 @@ export function MultiViewGrid({
                     src={embedUrl}
                     title={currentStreamer.name}
                     className="w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; screen-wake-lock"
                     allowFullScreen
                   />
                 ) : (

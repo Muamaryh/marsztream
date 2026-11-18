@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ImeStream, ImeGang, MultiViewLayout } from '@/types/imerp';
+import { useWakeLock } from '@/hooks/useWakeLock';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -17,6 +18,9 @@ interface ImeRPContextType {
   filteredStreams: ImeStream[];
   layout: MultiViewLayout;
   isLoading: boolean;
+  wakeLockEnabled: boolean;
+  wakeLockActive: boolean;
+  toggleWakeLock: () => void;
   setLayout: (layout: MultiViewLayout) => void;
   setSelectedGang: (gang: string) => void;
   setSearchQuery: (q: string) => void;
@@ -87,6 +91,13 @@ export function ImeRPProvider({ children }: { children: React.ReactNode }) {
     return streams.find((s) => s.id === activeStreamId) || streams[0];
   }, [streams, activeStreamId]);
 
+  // Automatically keep device screen awake (like native YouTube) whenever watching streams
+  const {
+    isEnabled: wakeLockEnabled,
+    isActive: wakeLockActive,
+    toggleWakeLock,
+  } = useWakeLock(Boolean(activeStream || streams.length > 0));
+
   // Filter streams by selected Gang and search query
   const filteredStreams = useMemo(() => {
     let list = streams;
@@ -137,6 +148,9 @@ export function ImeRPProvider({ children }: { children: React.ReactNode }) {
         filteredStreams,
         layout,
         isLoading,
+        wakeLockEnabled,
+        wakeLockActive,
+        toggleWakeLock,
         setLayout,
         setSelectedGang,
         setSearchQuery,

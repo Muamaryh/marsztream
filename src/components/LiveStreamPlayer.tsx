@@ -86,7 +86,7 @@ export function LiveStreamPlayer({
                 src={videoEmbedUrl}
                 title={streamTitle}
                 className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; screen-wake-lock"
                 allowFullScreen
               />
             ) : (
